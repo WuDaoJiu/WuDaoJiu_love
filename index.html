@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小氿的资料站</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%); color: #333; overflow-x: hidden;}
+        .cover {width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-size: cover; background-position: center; position: relative;}
+        .cover::before {content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.3); z-index: 1;}
+        .cover-content {position: relative; z-index: 2; text-align: center; color: white;}
+        .cover h1 {font-size: 3.5rem; font-weight: 300; letter-spacing: 0.5rem; margin-bottom: 2rem; animation: fadeInUp 1.5s ease;}
+        .cover-btn {padding: 1rem 3rem; background: rgba(255, 255, 255, 0.2); border: 2px solid white; color: white; font-size: 1.2rem; cursor: pointer; transition: all 0.3s; border-radius: 50px; backdrop-filter: blur(10px); animation: fadeInUp 2s ease;}
+        .cover-btn:hover {background: white; color: #4A90E2;}
+        .main-content {max-width: 1200px; margin: 0 auto; padding: 4rem 2rem;}
+        .info-card {background: rgba(255, 255, 255, 0.9); border: 2px solid #5B9BD5; border-radius: 20px; padding: 3rem; margin-bottom: 4rem; box-shadow: 0 10px 40px rgba(91, 155, 213, 0.2); animation: fadeIn 1s ease;}
+        .info-card h2 {color: #2C3E50; font-size: 2rem; margin-bottom: 2rem; text-align: center; font-weight: 300; letter-spacing: 0.3rem;}
+        .info-grid {display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;}
+        .info-text p {line-height: 2; margin-bottom: 1rem; font-size: 1.1rem;}
+        .model-image {text-align: center;}
+        .model-image img {max-width: 100%; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);}
+        .nav-section {margin-bottom: 4rem;}
+        .nav-section h3 {color: #2C3E50; font-size: 1.8rem; margin-bottom: 2rem; font-weight: 300; letter-spacing: 0.2rem;}
+        .card-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;}
+        .nav-card {background: white; border: 2px solid #5B9BD5; border-radius: 15px; overflow: hidden; cursor: pointer; transition: all 0.3s; box-shadow: 0 5px 20px rgba(91, 155, 213, 0.15);}
+        .nav-card:hover {transform: translateY(-10px); box-shadow: 0 15px 40px rgba(91, 155, 213, 0.3); border-color: #4A90E2;}
+        .nav-card img {width: 100%; height: 200px; object-fit: cover;}
+        .nav-card-content {padding: 1.5rem; text-align: center;}
+        .nav-card-content h4 {color: #2C3E50; font-size: 1.3rem; margin-bottom: 0.8rem; font-weight: 400;}
+        .nav-card-content p {color: #666; font-size: 0.95rem; line-height: 1.6;}
+        .video-wrapper {margin: 2rem 0; text-align: center;}
+        .video-wrapper video {max-width: 100%; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);}
+        .footer {text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, #f0f8ff 0%, #e6f2ff 100%);}
+        .footer p {font-size: 1.5rem; color: #4A90E2; font-weight: 300; letter-spacing: 0.2rem; animation: fadeIn 2s ease;}
+        @keyframes fadeIn {from {opacity: 0;} to {opacity: 1;}}
+        @keyframes fadeInUp {from {opacity: 0; transform: translateY(30px);} to {opacity: 1; transform: translateY(0);}}
+        @media (max-width: 768px) {.cover h1 {font-size: 2rem;} .info-grid {grid-template-columns: 1fr;} .card-grid {grid-template-columns: 1fr;}}
+    </style>
+</head>
+<body>
+    <div class="cover" style="background-image: url('cover.jpg');">
+        <div class="cover-content">
+            <h1><!-- 在这里放你的文案 --></h1>
+            <button class="cover-btn" onclick="document.querySelector('.main-content').scrollIntoView({behavior: 'smooth'})">进入</button>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="info-card">
+            <h2>关于我</h2>
+            <div class="info-grid">
+                <div class="info-text">
+                    <p><strong>昵称：</strong><!-- 填写 --></p>
+                    <p><strong>年龄：</strong><!-- 填写 --></p>
+                    <p><strong>擅长：</strong><!-- 填写 --></p>
+                    <p><strong>价格：</strong><!-- 填写 --></p>
+                </div>
+                <div class="model-image"><img src="model.jpg" alt="建模图"></div>
+            </div>
+        </div>
+        <div class="nav-section">
+            <h3>服务分区</h3>
+            <div class="card-grid">
+                <div class="nav-card" onclick="window.location.href='xulian.html'">
+                    <img src="xulian-cover.jpg" alt="虚恋">
+                    <div class="nav-card-content"><h4>虚恋</h4><p><!-- 在这里放小文案 --></p></div>
+                </div>
+                <div class="nav-card" onclick="window.location.href='binglian.html'">
+                    <img src="binglian-cover.jpg" alt="病恋">
+                    <div class="nav-card-content"><h4>病恋</h4><p><!-- 在这里放小文案 --></p></div>
+                </div>
+                <div class="nav-card" onclick="window.location.href='dom.html'">
+                    <img src="dom-cover.jpg" alt="Dom">
+                    <div class="nav-card-content"><h4>Dom</h4><p><!-- 在这里放小文案 --></p></div>
+                </div>
+                <div class="nav-card" onclick="window.location.href='sub.html'">
+                    <img src="sub-cover.jpg" alt="Sub">
+                    <div class="nav-card-content"><h4>Sub</h4><p><!-- 在这里放小文案 --></p></div>
+                </div>
+            </div>
+        </div>
+        <div class="nav-section">
+            <h3>我的团队</h3>
+            <div class="info-card">
+                <div class="model-image"><img src="team-intro.jpg" alt="自介"></div>
+                <div class="video-wrapper"><video controls><source src="team-voice.mp4" type="video/mp4"></video></div>
+            </div>
+        </div>
+        <div class="nav-section">
+            <h3>更多内容</h3>
+            <div class="card-grid">
+                <div class="nav-card" onclick="window.location.href='huashu.html'"><div class="nav-card-content"><h4>话术参考</h4><p>点击查看</p></div></div>
+                <div class="nav-card" onclick="window.location.href='kamian.html'"><div class="nav-card-content"><h4>卡面合集</h4><p>点击查看</p></div></div>
+                <div class="nav-card" onclick="window.location.href='youxi.html'"><div class="nav-card-content"><h4>会玩的游戏</h4><p>点击查看</p></div></div>
+                <div class="nav-card" onclick="window.location.href='liwu.html'"><div class="nav-card-content"><h4>小礼物</h4><p>点击查看</p></div></div>
+            </div>
+        </div>
+    </div>
+    <div class="footer"><p><!-- 在这里放你的收尾文案 --></p></div>
+    <audio autoplay loop><source src="bgm.mp3" type="audio/mpeg"></audio>
+    <script>
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {anchor.addEventListener('click', function (e) {e.preventDefault(); document.querySelector(this.getAttribute('href')).scrollIntoView({behavior: 'smooth'});});});
+        let musicPlayed = false; document.addEventListener('click', function() {if (!musicPlayed) {document.querySelector('audio').play(); musicPlayed = true;}});
+    </script>
+</body>
+</html>
