@@ -1154,13 +1154,14 @@ body.lightbox-open { overflow: hidden; }
 }
 
 .page4-link-row {
+  position: relative;
   display: flex;
   justify-content: center;
-  gap: 14px;
+  gap: 0;
   align-items: center;
   min-height: 68px;
   margin: 0;
-  padding: 10px 0;
+  padding: 10px 48px;
   color: var(--page4-blue);
   font-size: clamp(15px, 3.6vw, 22px);
   font-weight: 800;
@@ -1169,12 +1170,16 @@ body.lightbox-open { overflow: hidden; }
   text-decoration: none;
   transition: opacity 160ms ease;
 }
-
+/* 图标固定在行首左侧，不参与文字居中 */
 .page4-link-row img {
+  position: absolute;
+  top: 50%;
+  left: 0;
   display: block;
-  flex: 0 0 30px;
   width: 30px;
   height: 30px;
+  margin: 0;
+  transform: translateY(-50%);
   border-radius: 6px;
   box-shadow: 0 3px 8px rgba(26, 30, 38, .14);
   object-fit: cover;
@@ -1297,6 +1302,14 @@ body.lightbox-open { overflow: hidden; }
 }
 
 /* Local Chinese sans-serif fonts keep phone themes from replacing the typography. */
+/* 小氿的主题字体：虚拟的爱正在输入中（取自设备 /system/fonts/SysFont-Regular.ttf，已子集化） */
+@font-face {
+  font-family: "SiteLove";
+  src: url("site-love.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 @font-face {
   font-family: "SiteHeiti";
   src: url("site-heiti-regular-v2.otf") format("opentype");
@@ -1312,7 +1325,7 @@ body.lightbox-open { overflow: hidden; }
   font-display: swap;
 }
 :root {
-  --site-font: "SiteHeiti", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --site-font: "SiteLove", "SiteHeiti", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 body,
 .site-body :where(main, main *, button, .music-bar, .music-bar *, .bottom-nav, .bottom-nav *) {
