@@ -460,7 +460,7 @@ a {
   margin: 0 0 14px;
   color: #242326;
   font-size: 24px;
-  font-weight: 700 !important;
+  font-weight: 400 !important;
   font-family: "SiteKai", "Aozora Mincho", "KaiTi", "STKaiti", "Kaiti SC", serif;
   text-align: right;
 }
@@ -507,7 +507,7 @@ a {
 .page2-image-gallery.reveal-now .image-p1 img { animation-delay: .05s; }
 .page2-image-gallery.reveal-now .image-p2 img { animation-delay: .2s; }
 .page2-image-gallery.reveal-now .image-p3 img { animation-delay: .35s; }
-.notice-copy { color: #343c43; font-size: 15px; line-height: 1.78; text-align: right; }
+.notice-copy { color: #343c43; font-size: 13px; line-height: 1.78; text-align: right; }
 .notice-copy p { margin: 0 0 12px; }
 .notice-copy em { color: #94c9ff; font-style: normal; font-weight: 600; }
 
@@ -646,7 +646,7 @@ body.lightbox-open { overflow: hidden; }
   .letter-content { padding-right: 22px; padding-left: 22px; }
   .gallery-grid { gap: 8px; }
   .gallery-image { height: clamp(185px, 48vw, 260px); }
-  .notice-copy { font-size: 14px; }
+  .notice-copy { font-size: 12.5px; }
   .price-panel { padding-right: 17px; padding-left: 17px; }
   .price-panel p { font-size: 15px; }
 }
@@ -1104,9 +1104,9 @@ body.lightbox-open { overflow: hidden; }
 
 .page4-background-art p {
   margin: 0;
-  padding: 14px;
+  padding: 6px;
   color: var(--page4-blue);
-  font-size: clamp(13px, 2.7vw, 17px);
+  font-size: clamp(10px, 2.7vw, 13.5px);
   font-weight: 800;
   line-height: 1.9;
   text-align: center;
@@ -1135,7 +1135,7 @@ body.lightbox-open { overflow: hidden; }
   font-size: .86em;
 }
 
-.page4-profile > .page4-profile-row:last-child > strong { font-size: 18px; }
+.page4-profile > .page4-profile-row:last-child > strong { font-size: 14px; }
 .page4-profile-row strong {
   min-width: 0;
   font-weight: 800;
@@ -1154,9 +1154,9 @@ body.lightbox-open { overflow: hidden; }
 }
 
 .page4-link-row {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 30px;
-  gap: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
   align-items: center;
   min-height: 68px;
   margin: 0;
@@ -1172,6 +1172,7 @@ body.lightbox-open { overflow: hidden; }
 
 .page4-link-row img {
   display: block;
+  flex: 0 0 30px;
   width: 30px;
   height: 30px;
   border-radius: 6px;
@@ -1183,6 +1184,7 @@ body.lightbox-open { overflow: hidden; }
   display: block;
   min-width: 0;
   padding: 0;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 
@@ -1194,15 +1196,14 @@ body.lightbox-open { overflow: hidden; }
 
 .page4-link-copy em {
   color: #929292;
+  font-size: .82em;
   font-style: normal;
   font-weight: 600;
 }
 
 .page4-link-row::after {
-  display: block;
-  width: 30px;
-  height: 1px;
-  content: "";
+  display: none;
+  content: none;
 }
 
 .page4-link-fixed .page4-link-copy:not(.page4-symbol) { font-size: 13px; font-weight: 400; letter-spacing: -.1em; }
@@ -1298,14 +1299,14 @@ body.lightbox-open { overflow: hidden; }
 /* Local Chinese sans-serif fonts keep phone themes from replacing the typography. */
 @font-face {
   font-family: "SiteHeiti";
-  src: url("site-heiti-regular.otf") format("opentype");
+  src: url("site-heiti-regular-v2.otf") format("opentype");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "SiteHeiti";
-  src: url("site-heiti-bold.otf") format("opentype");
+  src: url("site-heiti-bold-v2.otf") format("opentype");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -1319,8 +1320,8 @@ body,
   font-weight: 400 !important;
   font-synthesis: none;
 }
-.site-body :is(.profile-content h1, .post-heading strong, .letter-heading h1,
-.notice-section h2, .notice-section .existence-hint, .page3-identity h1, .page3-post-author strong,
+.site-body :is(.profile-content h1, .post-heading strong,
+.page3-identity h1, .page3-post-author strong,
 .page4-profile-row > span, .page4-profile-row:first-child > strong) {
   font-weight: 700 !important;
 }
@@ -1345,9 +1346,8 @@ body,
   }
 
   .page4-background-art p {
-    padding: 8px;
-    font-size: 12px;
-    line-height: 1.9;
+    padding: 6px;
+    line-height: 1.85;
   }
 
   .page4-profile-row {
@@ -1357,8 +1357,7 @@ body,
   }
 
   .page4-link-row {
-    grid-template-columns: 30px minmax(0, 1fr) 30px;
-    gap: 13px;
+    gap: 12px;
     font-size: 15px;
   }
 
@@ -1366,15 +1365,12 @@ body,
     font-size: .82em;
   }
 
-  .page4-link-row::after {
-    width: 30px;
-  }
 }
 
 /* Narrow phones: keep the four-line confession inside the square card. */
 @media (max-width: 370px) {
   .page4-background-art p {
-    padding: 6px;
-    font-size: 11px;
+    padding: 5px;
+    font-size: 9.8px;
   }
 }
