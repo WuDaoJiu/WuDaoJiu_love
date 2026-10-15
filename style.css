@@ -309,7 +309,7 @@ a {
 /* The second view shares the welcome page shell so music survives navigation. */
 @font-face {
   font-family: "SiteKai";
-  src: url("AozoraMincho-bold.ttf") format("truetype");
+  src: url("site-kai-subset.woff?v=1") format("woff");
   font-style: normal;
   font-weight: 700;
   font-display: swap;

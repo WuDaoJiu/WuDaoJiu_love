@@ -210,8 +210,20 @@ document.querySelectorAll('.page3-tabs a').forEach((tab, index) => {
   });
 });
 
+/* 按需加载：切到某页时才唤醒该页的图片与视频，首屏不再被其他页抢带宽 */
+function wakePage(id) {
+  const page = document.getElementById(id);
+  if (!page) return;
+  page.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
+  const video = page.querySelector('video[data-poster]');
+  if (video) {
+    if (!video.poster) video.poster = video.getAttribute('data-poster');
+    if (video.preload !== 'metadata') video.preload = 'metadata';
+  }
+}
 function showPage(id, { resetScroll = true } = {}) {
   document.querySelectorAll('.welcome-view, .page-view').forEach(page => page.classList.toggle('is-visible', page.id === id));
+  wakePage(id);
   document.querySelectorAll('.bottom-nav a').forEach(link => link.classList.toggle('selected', link.dataset.page === id));
   const secondaryPage = id !== 'welcomePage';
   siteBody.classList.toggle('page2-active', id === 'page2');
