@@ -8,6 +8,7 @@
   --line: #eee9ec;
   --pink: #94c9ff;
   --paper: #fff;
+  --intro-figure-alpha: .82;
 }
 
 html,
@@ -1309,7 +1310,7 @@ body.lightbox-open { overflow: hidden; }
 /* 小氿的主题字体：虚拟的爱正在输入中（取自设备 /system/fonts/SysFont-Regular.ttf，已子集化） */
 @font-face {
   font-family: "SiteLove";
-  src: url("site-love.woff") format("woff");
+  src: url("site-love.woff?v=3") format("woff");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -1390,4 +1391,477 @@ body,
     padding: 5px;
     font-size: 9.8px;
   }
+}
+
+/* ===== MOTION ENHANCEMENTS ===== */
+
+/* 通用入场关键帧 */
+@keyframes page-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes p1-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes post-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 页面切换入场 */
+.page-view.is-entering,
+.welcome-view.is-entering {
+  animation: page-enter 460ms cubic-bezier(.22, .61, .36, 1) both;
+}
+
+/* P1 首屏依次入场 */
+.p1-loaded .profile-hero {
+  animation: p1-rise 580ms cubic-bezier(.22,.61,.36,1) both;
+}
+.p1-loaded .profile-content h1 {
+  animation: p1-rise 540ms cubic-bezier(.22,.61,.36,1) 70ms both;
+}
+.p1-loaded .handle {
+  animation: p1-rise 500ms cubic-bezier(.22,.61,.36,1) 120ms both;
+}
+.p1-loaded .bio {
+  animation: p1-rise 480ms cubic-bezier(.22,.61,.36,1) 165ms both;
+}
+.p1-loaded .tag-row {
+  animation: p1-rise 460ms cubic-bezier(.22,.61,.36,1) 205ms both;
+}
+.p1-loaded .meta-row {
+  animation: p1-rise 440ms cubic-bezier(.22,.61,.36,1) 245ms both;
+}
+.p1-loaded .stats-row {
+  animation: p1-rise 420ms cubic-bezier(.22,.61,.36,1) 285ms both;
+}
+.p1-loaded .profile-post {
+  animation: p1-rise 400ms cubic-bezier(.22,.61,.36,1) 330ms both;
+}
+
+/* P3/P4 reveal */
+.p3-reveal-item,
+.p4-reveal-item {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 620ms ease-out, transform 620ms ease-out;
+}
+.p3-reveal-item.is-revealed,
+.p4-reveal-item.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* P3 tab 切换时 post 内容过渡 */
+.page3-post.post-fading {
+  animation: post-fade 520ms ease-out both;
+}
+
+/* Bottom nav 滑动指示条 */
+.bottom-nav {
+  position: relative;
+}
+.bottom-nav-indicator {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: var(--pink);
+  border-radius: 2px 2px 0 0;
+  pointer-events: none;
+  transition: left 260ms cubic-bezier(.34,1.2,.64,1), width 260ms cubic-bezier(.34,1.2,.64,1), opacity 200ms ease;
+}
+
+/* 按钮 / 卡片微交互 */
+.action-button {
+  transition: transform 180ms ease, opacity 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+.action-button:active { transform: scale(0.95); }
+
+.tag-row span {
+  transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+  cursor: default;
+}
+
+.post-image-link {
+  transition: transform 260ms ease, box-shadow 260ms ease;
+}
+
+.page3-highlight {
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+
+a.page4-link-row {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+/* 悬停效果只在真正的鼠标设备上启用，避免触屏把 hover 状态粘住导致跳动 */
+@media (hover: hover) and (pointer: fine) {
+  .tag-row span:hover {
+    background: #daeef8;
+    color: #4a7a99;
+    transform: translateY(-2px);
+  }
+  .post-image-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(39,53,66,.11);
+  }
+  .page3-highlight:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 26px rgba(35,55,75,.22), 0 3px 8px rgba(35,55,75,.09);
+  }
+  a.page4-link-row:hover {
+    opacity: .7;
+    transform: translateX(4px);
+  }
+  .action-button:hover { opacity: .88; }
+}
+
+/* P3 subscribe 按钮 */
+.page3-subscribe {
+  transition: background 200ms ease, border-color 200ms ease, transform 180ms ease, opacity 620ms ease-out;
+}
+/* 跟随 P3 统一浮现节奏：只淡入，不做位移，避免与按下缩放打架 */
+.page3-subscribe.p3-reveal-item,
+.page3-subscribe.p3-reveal-item.is-revealed {
+  transform: none;
+}
+.page3-subscribe:active { transform: scale(0.97); }
+
+/* ===== 开屏 ===== */
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 32px;
+  background: var(--paper);
+  transition: opacity 880ms ease, visibility 880ms ease;
+}
+.intro-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("intro-figure.jpg?v=20261015R") center center / contain no-repeat;
+  opacity: var(--intro-figure-alpha, .82);
+  pointer-events: none;
+}
+.intro-overlay.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.intro-title {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  min-height: 1.5em;
+  font-size: clamp(25px, 7vw, 34px);
+  font-weight: 600;
+  letter-spacing: .28em;
+  text-indent: .28em;
+  color: var(--ink);
+  text-align: center;
+}
+.intro-title.is-typing::after {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: .95em;
+  margin-left: .1em;
+  vertical-align: -.08em;
+  background: var(--pink);
+  animation: intro-caret 900ms steps(1) infinite;
+}
+@keyframes intro-caret { 50% { opacity: 0; } }
+.intro-hint {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: .42em;
+  text-indent: .42em;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 1100ms ease, transform 1100ms ease;
+  cursor: pointer;
+}
+.intro-hint.show {
+  opacity: .5;
+  transform: none;
+  animation: intro-pulse 2.8s ease-in-out infinite;
+}
+@keyframes intro-pulse { 0%, 100% { opacity: .3; } 50% { opacity: .8; } }
+body.intro-locked { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-overlay { transition: none; }
+  .intro-title.is-typing::after { animation: none; }
+  .intro-hint.show { animation: none; opacity: .6; }
+  .p1-loaded .profile-hero,
+  .p1-loaded .profile-content h1,
+  .p1-loaded .handle,
+  .p1-loaded .bio,
+  .p1-loaded .tag-row,
+  .p1-loaded .meta-row,
+  .p1-loaded .stats-row,
+  .p1-loaded .profile-post { animation: none; }
+  .page-view.is-entering, .welcome-view.is-entering { animation: none; }
+  .p3-reveal-item, .p4-reveal-item { transition: none; opacity: 1; transform: none; }
+  .bottom-nav-indicator { transition: none; }
+  .post-image-link, .page3-highlight, .tag-row span { transition: none; }
+}
+
+/* ===== 开屏 · 交互问答（点击查看 → 问一句 → 进入） ===== */
+.intro-title { transition: opacity 700ms ease, transform 700ms ease; }
+.intro-overlay.is-asking .intro-title,
+.intro-overlay.is-asking .intro-hint {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+/* 问句展开后脉动动画会顶掉 opacity，hint 会残留——强制压下 */
+.intro-overlay.is-asking .intro-hint {
+  animation: none;
+  opacity: 0 !important;
+}
+/* 两张卡片叠在同一格里，切换时做交叉淡出，像翻页 */
+.intro-ask {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 28px 14px;
+}
+.intro-ask[hidden] { display: none; }
+
+/* —— 卡片：色调表面 + 朦胧透光（蓝白） —— */
+.ask-card {
+  position: relative;
+  grid-area: 1 / 1;
+  width: min(100%, 292px);
+  max-width: 23em;
+  padding: 30px 18px 26px;
+  border: 0;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .035);
+  box-shadow:
+    0 0 38px rgba(150, 170, 200, .16),
+    0 14px 32px -18px rgba(108, 130, 164, .26),
+    0 2px 10px -6px rgba(108, 130, 164, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .38),
+    inset 0 -1px 0 rgba(255, 255, 255, .10),
+    inset 0 0 40px rgba(255, 255, 255, .12),
+    inset 0 0 0 1px rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%) url(#liquid);
+  overflow: hidden;
+  isolation: isolate;
+  transition: opacity 620ms ease, transform 620ms ease, visibility 620ms ease;
+}
+.ask-card > * { position: relative; z-index: 3; }
+/* 朦胧反光：顶部柔白晕 + 一道极轻的斜向扫光 */
+.ask-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 28% -12%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 34%);
+}
+/* 玻璃厚度：只留一线极淡的亮边 */
+.ask-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: .45px;
+  opacity: .58;
+  background: conic-gradient(from 210deg,
+    rgba(255, 255, 255, .96),
+    rgba(255, 255, 255, .54),
+    rgba(255, 255, 255, .95),
+    rgba(255, 255, 255, .58),
+    rgba(255, 255, 255, .96));
+  filter: blur(.3px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+/* —— 第一张小卡：问句 —— */
+.ask-card-question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transform: translateY(12px);
+}
+.intro-ask.is-shown .ask-card-question { opacity: 1; transform: none; }
+.intro-ask.is-shown .ask-card-question.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  pointer-events: none;
+}
+.ask-line {
+  margin: 0;
+  font-size: clamp(14.5px, 4.36vw, 17.2px);
+  line-height: 1.75;
+  letter-spacing: .03em;
+  text-wrap: balance;
+  color: #5d6c85;
+  text-align: center;
+  opacity: 0;
+}
+.ask-line-key {
+  margin-top: 14px;
+  font-size: clamp(15.5px, 4.9vw, 19.5px);
+  letter-spacing: .05em;
+  color: #14315f;
+}
+.ask-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+  opacity: 0;
+}
+.ask-actions.is-leaving {
+  opacity: 0 !important;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+}
+/* —— 按钮（浅蓝 · 圆角长方形 · 极淡投影） —— */
+.ask-btn {
+  position: relative;
+  min-width: 108px;
+  padding: 12px 24px;
+  border: .5px solid rgba(255, 255, 255, .90);
+  border-radius: 13px;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: .24em;
+  text-indent: .24em;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(18px) saturate(126%);
+  backdrop-filter: blur(18px) saturate(126%);
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 420ms ease, transform 300ms ease, color 320ms ease, box-shadow 320ms ease, border-color 320ms ease, background 320ms ease;
+}
+.ask-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 58%);
+}
+.ask-btn:active { transform: scale(.97); }
+.ask-btn-primary {
+  color: #4c7cb8;
+  border-color: rgba(255, 255, 255, .90);
+  background: linear-gradient(158deg,
+    rgba(238, 246, 255, .26) 0%,
+    rgba(216, 234, 254, .19) 54%,
+    rgba(198, 221, 252, .15) 100%);
+  box-shadow:
+    0 1px 2px rgba(24, 62, 132, .06),
+    0 8px 18px -12px rgba(30, 74, 150, .16),
+    0 1px 0 rgba(255, 255, 255, .70) inset;
+}
+.ask-btn-primary:active {
+  background: linear-gradient(158deg,
+    rgba(250, 253, 255, .34) 0%,
+    rgba(230, 242, 254, .26) 54%,
+    rgba(212, 231, 253, .20) 100%);
+  box-shadow:
+    0 1px 2px rgba(24, 62, 132, .05),
+    0 4px 12px -10px rgba(30, 74, 150, .14),
+    0 1px 0 rgba(255, 255, 255, .74) inset;
+}
+.ask-btn-ghost {
+  color: #5d87bd;
+  border-color: rgba(255, 255, 255, .88);
+  background: linear-gradient(158deg,
+    rgba(255, 255, 255, .30) 0%,
+    rgba(232, 242, 255, .20) 100%);
+  box-shadow:
+    0 1px 2px rgba(24, 62, 132, .04),
+    0 8px 18px -14px rgba(30, 74, 150, .12),
+    0 1px 0 rgba(255, 255, 255, .66) inset;
+}
+.ask-btn-ghost:active {
+  background: linear-gradient(158deg, rgba(255, 255, 255, .68), rgba(218, 235, 255, .48));
+}
+/* —— 第二张小卡：沉默后的回应，独立一页 —— */
+.ask-card-reply {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(16px);
+  pointer-events: none;
+}
+.ask-card-reply.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+}
+.reply-line {
+  margin: 0;
+  font-size: clamp(14.5px, 4.23vw, 16.6px);
+  line-height: 1.8;
+  letter-spacing: .02em;
+  text-wrap: balance;
+  color: #5d6c85;
+  text-align: center;
+  opacity: 0;
+}
+.reply-line + .reply-line { color: #14315f; }
+.ask-card-reply .ask-btn { margin-top: 22px; opacity: 0; }
+/* 入场节奏：卡片先浮，字逐行跟上 */
+.intro-ask.is-shown .ask-line { animation: ask-rise 1000ms cubic-bezier(.22, .61, .36, 1) both; }
+.intro-ask.is-shown .ask-line:nth-child(1) { animation-delay: 60ms; }
+.intro-ask.is-shown .ask-line:nth-child(2) { animation-delay: 220ms; }
+.intro-ask.is-shown .ask-line:nth-child(3) { animation-delay: 380ms; }
+.intro-ask.is-shown .ask-actions { animation: ask-rise 1000ms cubic-bezier(.22, .61, .36, 1) 560ms both; }
+.ask-card-reply.is-shown .reply-line,
+.ask-card-reply.is-shown .ask-btn { animation: ask-rise 1150ms cubic-bezier(.22, .61, .36, 1) both; }
+.ask-card-reply.is-shown .reply-line:nth-child(1) { animation-delay: 80ms; }
+.ask-card-reply.is-shown .reply-line:nth-child(2) { animation-delay: 360ms; }
+.ask-card-reply.is-shown .ask-btn { animation-delay: 820ms; }
+@keyframes ask-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ask-card { transition: none; }
+  .intro-ask.is-shown .ask-card-question { opacity: 1; transform: none; }
+  .intro-ask.is-shown .ask-line,
+  .intro-ask.is-shown .ask-actions,
+  .ask-card-reply.is-shown .reply-line,
+  .ask-card-reply.is-shown .ask-btn { animation: none; opacity: 1; transform: none; }
 }

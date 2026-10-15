@@ -273,6 +273,145 @@ window.addEventListener('pageshow', event => {
 showPage(pageFromHash(), { resetScroll: false });
 playSong(activeSong);
 
+/* ===== MOTION ENHANCEMENTS ===== */
+
+// P1 首屏入场：监听 welcomePage 获得 is-visible 时触发
+(function () {
+  const welcome = document.getElementById('welcomePage');
+  if (!welcome) return;
+  let fired = false;
+  function triggerP1() {
+    if (fired) return;
+    fired = true;
+    document.body.classList.remove('p1-loaded');
+    void document.body.offsetWidth;
+    document.body.classList.add('p1-loaded');
+  }
+  if (welcome.classList.contains('is-visible')) {
+    requestAnimationFrame(triggerP1);
+  } else {
+    new MutationObserver(function (_, obs) {
+      if (welcome.classList.contains('is-visible')) {
+        requestAnimationFrame(triggerP1);
+        obs.disconnect();
+      }
+    }).observe(welcome, { attributes: true, attributeFilter: ['class'] });
+  }
+  // 开屏结束之后再播一次，让首屏跟着点击一起进场
+  window.addEventListener('site:intro-done', function () {
+    fired = false;
+    requestAnimationFrame(triggerP1);
+  });
+})();
+
+// 页面切换入场动效
+(function () {
+  var pages = [...document.querySelectorAll('.welcome-view, .page-view')];
+  pages.forEach(function (el) {
+    var busy = false;
+    new MutationObserver(function () {
+      if (busy) return;
+      if (!el.classList.contains('is-visible')) return;
+      busy = true;
+      el.classList.remove('is-entering');
+      void el.offsetWidth;
+      el.classList.add('is-entering');
+      window.setTimeout(function () {
+        el.classList.remove('is-entering');
+        window.setTimeout(function () { busy = false; }, 0);
+      }, 520);
+    }).observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+})();
+
+// Bottom nav 滑动指示条
+(function () {
+  var nav = document.querySelector('.bottom-nav');
+  if (!nav) return;
+  var indicator = document.createElement('div');
+  indicator.className = 'bottom-nav-indicator';
+  indicator.style.opacity = '0';
+  nav.appendChild(indicator);
+  function updateIndicator() {
+    var active = nav.querySelector('a.selected');
+    if (!active) { indicator.style.opacity = '0'; return; }
+    var navRect = nav.getBoundingClientRect();
+    var rect = active.getBoundingClientRect();
+    indicator.style.opacity = '1';
+    indicator.style.left = (rect.left - navRect.left) + 'px';
+    indicator.style.width = rect.width + 'px';
+  }
+  new MutationObserver(updateIndicator).observe(nav, { attributes: true, attributeFilter: ['class'], subtree: true });
+  window.addEventListener('resize', updateIndicator);
+  updateIndicator();
+})();
+
+// P3 reveal：进入时依次显示
+(function () {
+  var p3 = document.getElementById('page3');
+  if (!p3) return;
+  var items = [...p3.querySelectorAll('.page3-profile, .page3-subscribe, .page3-highlights, .page3-url, .page3-tabs, .page3-post')];
+  items.forEach(function (el) { el.classList.add('p3-reveal-item'); });
+  var wasVisible = false;
+  function revealP3() {
+    items.forEach(function (el, i) {
+      window.setTimeout(function () { el.classList.add('is-revealed'); }, i * 70);
+    });
+  }
+  function syncP3() {
+    var visible = p3.classList.contains('is-visible');
+    if (visible && !wasVisible) {
+      revealP3();
+    } else if (!visible && wasVisible) {
+      items.forEach(function (el) { el.classList.remove('is-revealed'); });
+    }
+    wasVisible = visible;
+  }
+  new MutationObserver(syncP3).observe(p3, { attributes: true, attributeFilter: ['class'] });
+  syncP3();
+})();
+
+// P4 reveal：进入时依次显示
+(function () {
+  var p4 = document.getElementById('page4');
+  if (!p4) return;
+  var items = [...p4.querySelectorAll('.page4-top, .page4-profile, .page4-links')];
+  items.forEach(function (el) { el.classList.add('p4-reveal-item'); });
+  var wasVisible = false;
+  function revealP4() {
+    items.forEach(function (el, i) {
+      window.setTimeout(function () { el.classList.add('is-revealed'); }, i * 90);
+    });
+  }
+  function syncP4() {
+    var visible = p4.classList.contains('is-visible');
+    if (visible && !wasVisible) {
+      revealP4();
+    } else if (!visible && wasVisible) {
+      items.forEach(function (el) { el.classList.remove('is-revealed'); });
+    }
+    wasVisible = visible;
+  }
+  new MutationObserver(syncP4).observe(p4, { attributes: true, attributeFilter: ['class'] });
+  syncP4();
+})();
+
+// P3 tab 切换时 post 淡入过渡
+(function () {
+  var postEl = document.querySelector('.page3-post');
+  if (!postEl) return;
+  document.querySelectorAll('.page3-tabs a').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      postEl.classList.remove('post-fading');
+      void postEl.offsetWidth;
+      postEl.classList.add('post-fading');
+      postEl.addEventListener('animationend', function () {
+        postEl.classList.remove('post-fading');
+      }, { once: true });
+    }, { capture: true });
+  });
+})();
+
 /* P2 lightbox — tap a card or the price sheet to view it full size */
 (function () {
   const zoomables = [...document.querySelectorAll('.page2-gallery-image img, .price-image img')];
@@ -312,5 +451,105 @@ playSong(activeSong);
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && overlay.classList.contains('is-open')) closeLightbox();
+  });
+})();
+
+/* ===== 开屏：打字机 → 问一句（小卡片）→ 进入 ===== */
+(function () {
+  const overlay = document.getElementById('introOverlay');
+  if (!overlay) return;
+  const titleEl = document.getElementById('introTitle');
+  const hintEl = document.getElementById('introHint');
+  const askEl = document.getElementById('introAsk');
+  const cardQ = document.getElementById('askCardQuestion');
+  const cardR = document.getElementById('askCardReply');
+  const agreeBtn = document.getElementById('askAgree');
+  const silentBtn = document.getElementById('askSilent');
+  const tryBtn = document.getElementById('askTry');
+  const text = overlay.getAttribute('data-title') || '娓娓道來';
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let index = 0;
+  let closed = false;
+  let asked = false;
+  let flipped = false;
+
+  document.body.classList.add('intro-locked');
+
+  function type() {
+    if (closed) return;
+    titleEl.textContent = text.slice(0, index);
+    if (index >= text.length) {
+      titleEl.classList.remove('is-typing');
+      hintEl.classList.add('show');
+      return;
+    }
+    index += 1;
+    window.setTimeout(type, index === 1 ? 520 : 240);
+  }
+  titleEl.classList.add('is-typing');
+  window.setTimeout(type, 420);
+
+  function frame(fn) {
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(fn);
+    });
+  }
+
+  function ask() {
+    if (asked || closed) return;
+    asked = true;
+    overlay.classList.add('is-asking');
+    if (!askEl) return;
+    window.setTimeout(function () {
+      askEl.hidden = false;
+      frame(function () { askEl.classList.add('is-shown'); });
+    }, reduce ? 0 : 560);
+  }
+
+  /* 沉默：问句那页整张退场，回应翻到新的一页 */
+  function flipToReply() {
+    if (flipped || closed) return;
+    if (!cardR) { dismiss(); return; }
+    flipped = true;
+    if (cardQ) cardQ.classList.add('is-leaving');
+    window.setTimeout(function () {
+      cardR.setAttribute('aria-hidden', 'false');
+      cardR.classList.add('is-shown');
+    }, reduce ? 0 : 420);
+  }
+
+  function dismiss() {
+    if (closed) return;
+    closed = true;
+    overlay.classList.add('is-leaving');
+    document.body.classList.remove('intro-locked');
+    window.dispatchEvent(new Event('site:intro-done'));
+    window.setTimeout(function () {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 1000);
+  }
+
+  hintEl.addEventListener('click', function (event) {
+    event.stopPropagation();
+    ask();
+  });
+  if (agreeBtn) agreeBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    dismiss();
+  });
+  if (silentBtn) silentBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    flipToReply();
+  });
+  if (tryBtn) tryBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    dismiss();
+  });
+  document.addEventListener('keydown', function (event) {
+    if (closed || asked) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
+      event.preventDefault();
+      ask();
+    }
   });
 })();

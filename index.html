@@ -4,10 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>娓娓道來</title>
-<link rel="stylesheet" href="style.css?v=20261015w">
+<link rel="stylesheet" href="style.css?v=20261015X">
 
 </head>
 <body class="p1-body site-body">
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <filter id="liquid" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.011" numOctaves="2" seed="7" result="noise"/>
+        <feGaussianBlur in="noise" stdDeviation="6" result="soft"/>
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+  <div class="intro-overlay" id="introOverlay" data-title="娓娓道來">
+    <p class="intro-title" id="introTitle"></p>
+    <button class="intro-hint" id="introHint" type="button">点击即可查看</button>
+    <section class="intro-ask" id="introAsk" aria-label="一句想问的话" hidden>
+      <div class="ask-card ask-card-question" id="askCardQuestion">
+        <p class="ask-line">人如果非要博弈的话，</p>
+        <p class="ask-line">为什么要比谁更冷淡、谁更能掌控一切局势呢？</p>
+        <p class="ask-line ask-line-key">就应该比谁更勇敢、谁的真心更滚烫。</p>
+        <div class="ask-actions" id="askActions">
+          <button class="ask-btn ask-btn-primary" id="askAgree" type="button">认同</button>
+          <button class="ask-btn ask-btn-ghost" id="askSilent" type="button">沉默</button>
+        </div>
+      </div>
+      <div class="ask-card ask-card-reply" id="askCardReply" aria-hidden="true">
+        <p class="reply-line">对不起，是我让您回避了吗？</p>
+        <p class="reply-line">没关系、在选择付出的瞬间我便不会再因此迟疑。</p>
+        <button class="ask-btn ask-btn-primary" id="askTry" type="button">那就试试</button>
+      </div>
+    </section>
+  </div>
   <header class="music-bar is-collapsed" aria-label="音乐控制" hidden>
     <button class="music-toggle" type="button" aria-label="展开音乐控制" aria-expanded="false"><span class="music-note" aria-hidden="true">♫</span></button>
     <div class="music-controls" hidden>
@@ -173,6 +202,38 @@
     <a href="#page3" data-page="page3">恨海情天</a>
     <a href="#page4" data-page="page4">之死靡他</a>
   </nav>
-  <script src="script.js?v=20261015m"></script>
+  <script src="script.js?v=20261015E"></script>
+  <script>
+  /* 整行适配：字体或屏幕差异导致换行时，自动微缩这一句的字号，保证一句一行 */
+  (function () {
+    var SEL = ['.ask-line', '.reply-line'];
+    function fit() {
+      var ctx = document.createElement('canvas').getContext('2d');
+      SEL.forEach(function (sel) {
+        Array.prototype.forEach.call(document.querySelectorAll(sel), function (p) {
+          p.style.fontSize = '';
+          var box = p.closest('.ask-card');
+          if (!box) return;
+          var bs = getComputedStyle(box);
+          var avail = box.clientWidth - parseFloat(bs.paddingLeft) - parseFloat(bs.paddingRight);
+          if (!avail || avail < 60) return;
+          var cs = getComputedStyle(p);
+          ctx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+          var ls = parseFloat(cs.letterSpacing) || 0;
+          var need = ctx.measureText(p.textContent).width + ls * p.textContent.length;
+          if (need > avail) {
+            var fs = parseFloat(cs.fontSize);
+            var next = Math.max(11, Math.floor(fs * avail / need * 98) / 100);
+            p.style.fontSize = next + 'px';
+          }
+        });
+      });
+    }
+    function boot() { setTimeout(fit, 80); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot);
+    window.addEventListener('load', boot);
+    window.addEventListener('resize', boot);
+  })();
+  </script>
 </body>
 </html>
