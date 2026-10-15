@@ -1547,9 +1547,13 @@ a.page4-link-row {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("intro-figure.jpg?v=20261015R") center center / contain no-repeat;
+  background: url("intro-figure.jpg?v=20261015T") center center / cover no-repeat;
   opacity: var(--intro-figure-alpha, .82);
   pointer-events: none;
+}
+/* 横屏/宽屏下 cover 会把水彩裁没，回退成完整显示 */
+@media (min-aspect-ratio: 10/9) {
+  .intro-overlay::before { background-size: contain; }
 }
 .intro-overlay.is-leaving {
   opacity: 0;
