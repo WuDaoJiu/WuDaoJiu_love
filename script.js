@@ -182,7 +182,25 @@ const page3Posts = [
     stats: ['1,927', '734', '2.1万']
   }
 ];
-
+/* page3 的四张动态图不在首屏 HTML 里，首次点击才开始下载。Safari 在 img.src 变更后会保留旧画面，
+   直到新图下载并解码完成——切换时"闪一下上一张"就是这么来的。
+   进页面后趁空闲把它们预拉进缓存并解码，切换就变成同步的，中间没有等待窗口。 */
+const page3ImageCache = new Map();
+function preloadPage3Images() {
+  page3Posts.forEach(post => {
+    if (page3ImageCache.has(post.image)) return;
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = post.image;
+    if (typeof img.decode === 'function') img.decode().catch(() => {});
+    page3ImageCache.set(post.image, img);
+  });
+}
+function schedulePage3Preload() {
+  const run = () => preloadPage3Images();
+  if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 1500 });
+  else window.setTimeout(run, 600);
+}
 function setPage3Post(post) {
   const copy = document.getElementById('page3-post-copy');
   if (!copy || !post) return;
@@ -214,6 +232,7 @@ document.querySelectorAll('.page3-tabs a').forEach((tab, index) => {
 function wakePage(id) {
   const page = document.getElementById(id);
   if (!page) return;
+  if (id === 'page3') schedulePage3Preload();
   page.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
   const video = page.querySelector('video[data-poster]');
   if (video) {
