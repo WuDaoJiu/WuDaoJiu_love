@@ -242,7 +242,7 @@ function wakePage(id) {
   if (!page) return;
   if (id === 'page3') { preloadPage3Tiles(); schedulePage3Preload(); }
   page.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
-  warmDecodeImages(page);  /* [ios-perf2026-10-23] 唤醒后立刻交给后台线程解码 */
+  /* [ios8] 逐张 decode 已停用：在 iOS 上会与开屏动画抢主线程 */
   const video = page.querySelector('video[data-poster]');
   if (video) {
     if (!video.poster) video.poster = video.getAttribute('data-poster');
@@ -288,6 +288,9 @@ function warmDecodeImages(root) {
    里面那几张 150~230KB 的 jpg 如果等到点进去才开始下载 + 解码，iOS 上就是一下明显卡顿。
    一次只处理一张、空闲时进行，不抢首屏带宽。 */
 (function () {
+  /* [ios8] 预取已停用：原逻辑把第二页 14 张图改成 eager 再 decode，
+     会在开屏刚结束那几秒堆出一批并发请求，iOS 上卡顿+个别图加载失败。 */
+  return;
   var done = false;
   var run = function () {
     if (done) return;
