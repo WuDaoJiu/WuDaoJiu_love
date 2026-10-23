@@ -1,27 +1,93 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>娓娓道來</title>
-  <link rel="preload" as="image" href="intro-figure.jpg?v=20261015T" fetchpriority="high">
-<link rel="stylesheet" href="style.css?v=20261015Z3">
+<html lang="zh-CN"><head>
+<script>
+/* [lite] 带 ?lite=1 时禁用一切 WebGL 上下文：代码雨 / 液态透镜 / 波纹 全部自动降级，
+   CSS 视觉与交互完全保留。用于显卡/WebView 扛不住时的降档通道。 */
+(function () {
+  if (!/[?&]lite=1/.test(location.search)) return;
+  var orig = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (t) {
+    if (typeof t === 'string' && t.indexOf('webgl') === 0) return null;
+    return orig.apply(this, arguments);
+  };
+  window.__LITE__ = true;
+})();
+</script>
 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>娓娓道來</title>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="娓娓道來">
+  <meta name="format-detection" content="telephone=no,email=no,address=no">
+  <link rel="preload" as="image" href="intro-figure.jpg?v=20261015T" fetchpriority="high">
+<link rel="stylesheet" href="style.css?v=20261023_OPT1">
+
+<script>
+(function(){
+  function paint(t){
+    var d=document.getElementById('__diagBox');
+    if(!d){
+      d=document.createElement('div');
+      d.id='__diagBox';
+      d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;max-height:42vh;overflow:auto;background:#c40018;color:#fff;font:11px/1.5 monospace;padding:8px 10px;white-space:pre-wrap;word-break:break-all;';
+      (document.body||document.documentElement).appendChild(d);
+    }
+    d.textContent += t + '\n';
+  }
+  window.addEventListener('error', function(e){
+    var t = e.target || {};
+    if (t && t.tagName) { paint('[LOAD FAIL] ' + t.tagName + ' ' + (t.src || t.href || '')); return; }
+    paint('[ERR] ' + (e.message || '') + ' @' + String(e.filename || '?').split('/').pop() + ':' + e.lineno + ':' + e.colno);
+  }, true);
+   window.addEventListener('unhandledrejection', function(e){
+     var r = e.reason || {};
+     paint('[REJ] ' + (r.message || r));
+   });
+ })();
+ </script>
+<script>
+/* [perf-probe] 临时性能分项开关：?noanim / ?noback / ?nofilter，用于定位耗电元凶 */
+(function () {
+  var q = location.search, css = '';
+  if (/[?&]noanim=1/.test(q))   css += '*,*::before,*::after{animation:none!important;transition:none!important}';
+  if (/[?&]noback=1/.test(q))   css += '*,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}';
+  if (/[?&]nofilter=1/.test(q)) css += '*,*::before,*::after{filter:none!important}';
+  if (/[?&]noshadow=1/.test(q)) css += '*,*::before,*::after{box-shadow:none!important}';
+  if (css) {
+    var s = document.createElement('style');
+    s.textContent = css;
+    (document.head || document.documentElement).appendChild(s);
+  }
+})();
+</script>
 </head>
-<body class="p1-body site-body">
+<body class="p1-body site-body p1-loaded">
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
     <defs>
       <filter id="liquid" x="-20%" y="-20%" width="140%" height="140%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.011" numOctaves="2" seed="7" result="noise"/>
-        <feGaussianBlur in="noise" stdDeviation="6" result="soft"/>
-        <feDisplacementMap in="SourceGraphic" in2="soft" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.011" numOctaves="2" seed="7" result="noise"></feTurbulence>
+        <feGaussianBlur in="noise" stdDeviation="6" result="soft"></feGaussianBlur>
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="34" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+      </filter>
+      <filter id="permGlitch" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+        <feTurbulence id="permGlitchNoise" type="fractalNoise" baseFrequency="0.0018 0.34" numOctaves="1" seed="3" result="noise"></feTurbulence>
+        <feDisplacementMap id="permGlitchShift" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" result="warped"></feDisplacementMap>
+        <feColorMatrix in="warped" type="saturate" values="1.5" result="sat"></feColorMatrix>
+        <feComponentTransfer in="sat" result="punch">
+          <feFuncR type="linear" slope="1.12" intercept="-0.03"></feFuncR>
+          <feFuncG type="linear" slope="1.12" intercept="-0.03"></feFuncG>
+          <feFuncB type="linear" slope="1.12" intercept="-0.03"></feFuncB>
+        </feComponentTransfer>
       </filter>
     </defs>
   </svg>
   <div class="intro-overlay" id="introOverlay" data-title="娓娓道來">
-    <p class="intro-title" id="introTitle"></p>
+    <p class="intro-title" id="introTitle" aria-label="娓娓道來"></p>
     <button class="intro-hint" id="introHint" type="button">点击即可查看</button>
-    <section class="intro-ask" id="introAsk" aria-label="一句想问的话" hidden>
+    <section class="intro-ask" id="introAsk" aria-label="一句想问的话" hidden="">
       <div class="ask-card ask-card-question" id="askCardQuestion">
         <p class="ask-line">人如果非要博弈的话，</p>
         <p class="ask-line">为什么要比谁更冷淡、谁更能掌控一切局势呢？</p>
@@ -38,25 +104,43 @@
       </div>
     </section>
   </div>
-  <header class="music-bar is-collapsed" aria-label="音乐控制" hidden>
+  <div class="perm-layer" id="permLayer" hidden="">
+    <div class="perm-shade" aria-hidden="true"></div>
+    <div class="perm-card" id="permCard" role="dialog" aria-modal="true" aria-labelledby="permApp">
+      <p class="perm-app" id="permApp">「雾岛氿」申请摄像头权限</p>
+      <div class="perm-actions">
+        <button class="perm-btn perm-btn-primary" id="permAllowAlways" type="button">始终允许</button>
+        <button class="perm-btn" id="permAllowOnce" type="button">只允许一次</button>
+        <button class="perm-btn perm-btn-deny" id="permDeny" type="button">拒绝</button>
+      </div>
+    </div>
+    <div class="perm-plea-layer" id="permPleaCard" hidden="">
+      <p class="perm-plea-card" id="permPleaText">不行吗...?</p>
+    </div>
+    <div class="perm-toast" id="permToast" aria-live="polite" hidden="">
+      <p class="perm-toast-line" id="permToastLine"></p>
+    </div>
+  </div>
+  <header class="music-bar is-collapsed is-playing" aria-label="音乐控制">
     <button class="music-toggle" type="button" aria-label="展开音乐控制" aria-expanded="false"><span class="music-note" aria-hidden="true">♫</span></button>
-    <div class="music-controls" hidden>
+    <div class="music-controls" hidden="">
       <button class="music-btn active" type="button" data-song="3363498728">無言愛</button>
       <button class="music-btn" type="button" data-song="3435222249">翠鳥之夢</button>
       <button class="music-btn pause-btn" type="button" aria-label="暂停音乐">Ⅱ</button>
     </div>
-    <audio id="site-audio" preload="none"></audio>
+    <audio id="site-audio" preload="none" src="https://music.163.com/song/media/outer/url?id=3363498728.mp3"></audio>
   </header>
 
   <main class="profile-page welcome-view" id="welcomePage">
+    <div class="dream-tilt" aria-hidden="true"></div>
     <section class="profile-hero" aria-label="个人主页头图">
       <img class="profile-background" src="background.jpg" fetchpriority="high" width="810" height="1080" alt="背景图">
       <div class="profile-avatar-wrap"><img class="profile-avatar" src="avatar.jpg" fetchpriority="high" width="1080" height="1080" alt="Elysia头像"></div>
     </section>
     <section class="profile-content">
       <div class="profile-actions" aria-label="个人操作">
-        <button class="action-button" type="button">私信</button>
-        <button class="action-button action-button-primary" type="button">关注</button>
+        <button class="action-button" id="messageButton" type="button">私信</button>
+        <button class="action-button action-button-primary" id="followButton" type="button" aria-pressed="false"><span class="action-label">关注</span></button>
       </div>
       <h1>天使用户0516 <span class="verified" aria-label="已认证">✿</span></h1>
       <p class="handle">@Elysia</p>
@@ -74,29 +158,127 @@
     </section>
   </main>
 
-  <main class="letter-page page-view" id="page2" aria-label="您好幸識">
-    <div class="letter-backdrop letter-backdrop-top" aria-hidden="true"></div>
-    <div class="letter-content">
-    <header class="letter-heading page2-reveal"><span class="cross-mark">✝</span><h1>您好幸識</h1></header>
-    <p class="letter-signature page2-reveal">雾岛氿 / 娓吻 / 來世</p>
-    <p class="letter-meta page2-reveal">Le-T·金牛座·INFJ-A·04年生·Switch</p>
-    <p class="letter-intro page2-reveal">无恋人无暧昧无心选无特殊关系、状态稳定</p>
-    <div class="gallery-grid page2-reveal" aria-label="影像">
-      <figure class="gallery-image image-one"><img decoding="async" src="chapel.jpg" width="1080" height="608" alt="幽蓝的教堂窗影"></figure>
-      <figure class="gallery-image image-two"><img decoding="async" src="sky-child.jpg" width="850" height="1080" alt="站在蓝色水面上的黑袍旅人"></figure>
-      <figure class="gallery-image image-three"><img decoding="async" src="angel-diptych.jpg" width="736" height="736" alt="黑白色调的天使与雕像"></figure>
+  <main class="letter-page page-view p2-stacked-mode is-visible" id="page2" aria-label="您好幸識">
+    <!-- 深海 ASCII 水母背景（jelly-deep.js 绘制；只铺深色区，浅蓝不动） -->
+    <div class="p2-jelly-layer" id="p2JellyLayer" aria-hidden="true"><canvas id="p2Jelly"></canvas></div>
+    <div class="p2-viewport">
+      <!-- 顶部 Header：大头像 + 天使用户0516 -->
+      <header class="p2-topbar">
+        <!-- [v49c] 水母穿过导航栏时的虚化：镜像画布。
+             从 #p2Jelly 拷贝“被导航栏盖住的那一段”，加 CSS blur → 模糊的水母。
+             不用 backdrop-filter：那需要每帧回读活动画布，安卓 WebView 扛不住。 -->
+        <canvas class="p2-topbar-frost" id="p2TopFrost" aria-hidden="true"></canvas>
+        <div class="p2-profile-badge">
+          <img class="p2-profile-avatar" src="page2-avatar.jpg" alt="Elysia" width="56" height="56" loading="lazy">
+          <div class="p2-profile-info">
+            <span class="p2-profile-title">天使用户0516</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 竖形票根层叠展示区（参考图1 & 图4） -->
+      <section class="p2-ticket-stage" aria-label="票根展台">
+        <div class="p2-ticket-deck" id="p2TicketDeck">
+          <!-- 票根 1 -->
+          <article class="p2-card is-next is-ident" data-index="0" role="button" tabindex="0" aria-label="票根 01：您好幸識，点击翻页" aria-hidden="true">
+            <div class="p2-card-inner">
+              <div class="p2-card-frame">
+                <img class="p2-card-cover p2-zoom" src="page2-ticket1.jpg?v=ident5" alt="您好幸識" loading="lazy">
+              </div>
+              <div class="p2-card-divider" aria-hidden="true"></div>
+              <div class="p2-card-body">
+                <h3 class="p2-card-title"><span class="p2-title-cross">✝</span>您好幸識</h3>
+                <p class="p2-card-sub">雾岛氿 / 娓吻 / 來世</p>
+                <div class="p2-card-meta p2-meta-id">
+                  <span class="p2-meta-item"><em>CHAR</em>Le-T · 金牛座 · INFJ-A · 04年生 · Switch</span>
+                  <span class="p2-meta-item"><em>STATE</em>无恋人无暧昧无心选无特殊关系 · 状态稳定</span>
+                  <span class="p2-meta-item"><em>MODEL</em>常驻建模 · 零号疯帽</span>
+                </div>
+                <p class="p2-card-quote">Light dwells in silence, where the soul prays.</p>
+                <div class="p2-card-footer">
+                  <span class="p2-card-admit">ADMIT ONE</span>
+                  <span class="p2-card-code"><svg class="p2-sakura" viewBox="-12 -12 24 24" aria-hidden="true" focusable="false"><g fill="currentColor"><path transform="rotate(0)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(72)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(144)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(216)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(288)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/></g><circle cx="0" cy="0" r="1.3" fill="#fff" opacity=".85"/></svg>0516</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- 票根 2 -->
+          <article class="p2-card is-prev is-exist" data-index="1" role="button" tabindex="0" aria-label="票根 02：我存在於，点击翻页" aria-hidden="true">
+            <div class="p2-card-inner">
+              <div class="p2-collage">
+                <img class="p2-shot p2-shot-a p2-zoom" src="t2-a.jpg?v=ident3" alt="灯塔票卡" data-zoom-caption="01" loading="lazy">
+                <img class="p2-shot p2-shot-c p2-zoom" src="t2-c.jpg?v=ident3" alt="雾岛氿票卡" data-zoom-caption="03" loading="lazy">
+                <img class="p2-shot p2-shot-b p2-zoom" src="t2-b.jpg?v=ident3" alt="光年外票卡" data-zoom-caption="02" loading="lazy">
+                <span class="p2-jelly-tag" aria-hidden="true">Jellyfish</span>
+                <img class="p2-jelly" src="jelly.png?v=j5" alt="" aria-hidden="true" decoding="async" loading="lazy">
+                <div class="p2-wave" aria-hidden="true"><span class="w-a">This is the palest blue,</span><span class="w-b">talking, talking,</span><span class="w-c">always talking to you &mdash;</span><span class="w-d">and i keep sinking in it.</span></div>
+              </div>
+              <div class="p2-card-body p2-body-exist">
+                <h3 class="p2-card-title"><span class="p2-title-cross">✝</span>我存在於</h3>
+                <p class="p2-card-sub"><span class="p2-sub-dim">驻团</span><span class="p2-sub-blue">灯塔 / 光年外 / 别后十三春</span><span class="p2-sub-note">请注意辨别</span></p>
+                <p class="p2-card-quote">My soul seeks Him whom my heart adores.</p>
+                <div class="p2-card-footer">
+                  <span class="p2-card-admit">SPECIAL PASS</span>
+                  <span class="p2-card-code"><svg class="p2-sakura" viewBox="-12 -12 24 24" aria-hidden="true" focusable="false"><g fill="currentColor"><path transform="rotate(0)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(72)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(144)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(216)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(288)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/></g><circle cx="0" cy="0" r="1.3" fill="#fff" opacity=".85"/></svg>0516</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- 票根 3 · 請您註意 -->
+          <article class="p2-card is-front is-note" data-index="2" role="button" tabindex="0" aria-label="票根 03：請您註意，点击翻页" aria-hidden="false">
+            <div class="p2-card-inner">
+              <div class="p2-card-frame p2-note-frame">
+                <img class="p2-card-cover p2-note-img p2-zoom" src="price-note.jpg?v=note1" data-zoom-src="price-note.jpg?v=note1" alt="基礎價格" decoding="async" loading="lazy">
+              </div>
+              <div class="p2-card-divider" aria-hidden="true"></div>
+              <div class="p2-card-body p2-note-body">
+                <h3 class="p2-card-title"><span class="p2-title-cross">✝</span>請您註意</h3>
+                <div class="p2-rules">
+                  <p><span class="p2-blue">拒接</span>男/18-/批马甲/熟人未经同意直接存单</p>
+                  <p><span class="p2-blue">拒接</span>修罗场/反修罗/水仙/纯调/您旁观的互病/恋物</p>
+                  <p>定好取单时间后若要<span class="p2-blue">修改</span>请至少提前<span class="p2-blue">3h</span>同我商量</p>
+                  <p>我最多等待您<span class="p2-blue">10min</span>并<span class="p2-blue">计入接单时间总长</span></p>
+                  <p><span class="p2-blue">超出10min</span>那么我们下次再约</p>
+                  <p>新手点单/单口/话少/拼刺刀请<span class="p2-blue">提前告知</span></p>
+                  <p>可自留截图但严禁以任何方式传播违者<span class="p2-blue">十倍赔偿</span></p>
+                </div>
+                <p class="p2-card-quote">Love lifts mortal souls toward the stars.</p>
+                <div class="p2-card-footer">
+                  <span class="p2-card-admit">TERMS PASS</span>
+                  <span class="p2-card-code"><svg class="p2-sakura" viewBox="-12 -12 24 24" aria-hidden="true" focusable="false"><g fill="currentColor"><path transform="rotate(0)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(72)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(144)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(216)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/><path transform="rotate(288)" d="M0,-3 C-3.3,-5.2 -3.9,-9.4 -1.9,-10.9 C0.3,-12.3 2.5,-11.1 3.2,-8.8 C3.9,-6.5 3,-3.7 0,-3 Z"/></g><circle cx="0" cy="0" r="1.3" fill="#fff" opacity=".85"/></svg>0516</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+
+      </section>
     </div>
-    <p class="gallery-caption page2-reveal">常駐建模·零号疯帽</p>
-    <section class="notice-section page2-notice page2-left-aligned page2-reveal">
-      <p class="existence-hint page2-reveal">我存在於✝</p>
-      <p class="location-hint page2-reveal"><span class="location-black">驻团</span> <span class="location-blue">灯塔/光年外/别后十三春</span> <span class="location-black">请注意辨别</span></p>
-      <div class="page2-image-gallery page2-reveal">
-        <figure class="page2-gallery-image image-p1"><img decoding="async" src="page2-p1.jpg" width="678" height="1080" alt="P1"></figure>
-        <figure class="page2-gallery-image image-p2"><img decoding="async" src="page2-p2.jpg" width="1074" height="1080" alt="P2"></figure>
-        <figure class="page2-gallery-image image-p3"><img decoding="async" src="page2-p3.jpg" width="791" height="1080" alt="P3"></figure>
+
+    <div class="letter-content" hidden="">
+    <header class="letter-heading page2-reveal is-revealed"><span class="cross-mark">✝</span><h1>您好幸識</h1></header>
+    <p class="letter-signature page2-reveal is-revealed">雾岛氿 / 娓吻 / 來世</p>
+    <p class="letter-meta page2-reveal is-revealed">Le-T·金牛座·INFJ-A·04年生·Switch</p>
+    <p class="letter-intro page2-reveal is-revealed">无恋人无暧昧无心选无特殊关系、状态稳定</p>
+    <div class="gallery-grid page2-reveal reveal-now is-revealed" aria-label="影像">
+      <figure class="gallery-image image-one"><img decoding="async" src="chapel.jpg" width="1080" height="608" alt="幽蓝的教堂窗影" loading="lazy"></figure>
+      <figure class="gallery-image image-two"><img decoding="async" src="page2-ticket1.jpg?v=ident5" width="850" height="1080" alt="站在蓝色水面上的黑袍旅人" loading="lazy"></figure>
+      <figure class="gallery-image image-three"><img decoding="async" src="angel-diptych.jpg" width="736" height="736" alt="黑白色调的天使与雕像" loading="lazy"></figure>
+    </div>
+    <p class="gallery-caption page2-reveal is-revealed">常駐建模·零号疯帽</p>
+    <section class="notice-section page2-notice page2-left-aligned page2-reveal is-revealed">
+      <p class="existence-hint page2-reveal is-revealed">我存在於✝</p>
+      <p class="location-hint page2-reveal is-revealed"><span class="location-black">驻团</span> <span class="location-blue">灯塔/光年外/别后十三春</span> <span class="location-black">请注意辨别</span></p>
+      <div class="page2-image-gallery page2-reveal reveal-now is-revealed">
+        <figure class="page2-gallery-image image-p1"><img decoding="async" src="page2-p1.jpg" width="678" height="1080" alt="P1" loading="lazy"></figure>
+        <figure class="page2-gallery-image image-p2"><img decoding="async" src="page2-p2.jpg" width="1074" height="1080" alt="P2" loading="lazy"></figure>
+        <figure class="page2-gallery-image image-p3"><img decoding="async" src="page2-p3.jpg" width="791" height="1080" alt="P3" loading="lazy"></figure>
       </div>
-      <h2 class="page2-notice-title page2-reveal">✝請您注意</h2>
-      <div class="notice-copy page2-reveal">
+      <h2 class="page2-notice-title page2-reveal is-revealed">✝請您注意</h2>
+      <div class="notice-copy page2-reveal is-revealed">
         <p><em>拒接</em>男 /18-/ 批马甲 / 熟人未经同意直接存单</p>
         <p><em>拒接</em>修罗场 / 反修罗 / 水仙 / 纯调 / 您旁观的互病 / 恋物</p>
         <p>定好接单时间后若要<em>修改</em> 请至少提前 <em>3h</em> 同我商量</p>
@@ -105,17 +287,52 @@
         <p>新手点单 / 单口 / 话少 / 拼刺刀请<em>提前告知</em></p>
         <p>可自留截图 但严禁以任何方式传播 违者<em>十倍赔偿</em></p>
       </div>
-      <figure class="price-image page2-reveal"><img decoding="async" src="price-card.jpg" width="1080" height="1080" alt="基础价格与加价专区"></figure>
+      <figure class="price-image page2-reveal is-revealed"><img decoding="async" src="price-card.jpg" width="1080" height="1080" alt="基础价格与加价专区" loading="lazy"></figure>
     </section>
     </div>
+    <section class="p2-postcard-reveal" id="p2PostcardReveal" aria-label="隐藏明信片票根">
+      <div class="pt-dim" aria-hidden="true"></div>
+      <div class="pt-stage">
+        <div class="pt-ticket" id="p2PostcardTicket">
+          <div class="pt-cast" aria-hidden="true"></div>
+          <div class="pt-plane" data-ticket-plane>
+            <div class="pt-shift" data-ticket-shift>
+              <div class="pt-body" data-ticket-body>
+                <div class="pt-body-paper" data-body-paper>
+                  <div class="pt-photo">
+                    <img src="ticket-photo.jpg?v=1" width="1080" height="687" alt="蓝色记忆占位图" loading="eager" decoding="async">
+                    <span class="pt-photo-stamp" aria-hidden="true">EDEN<br>✦<br>0516</span>
+                  </div>
+                </div>
+                <svg class="pt-outline" aria-hidden="true"><path data-body-outline></path></svg>
+              </div>
+              <div class="pt-stub" data-ticket-stub>
+                <div class="pt-cast-stub" aria-hidden="true"></div>
+                <div class="pt-stub-paper" data-stub-paper></div>
+                <svg class="pt-outline" aria-hidden="true"><path data-stub-outline></path></svg>
+                <button class="pt-stub-face" id="p2PostcardStub" type="button" aria-label="撕下票据">
+                  <span class="pt-stub-top"><span class="pt-stub-place">娓娓道來</span><span class="pt-stub-date">2026.10.23</span></span>
+                  <span class="pt-stub-roman">WEIWEI DAOLAI</span>
+                  <span class="pt-stub-tags">水母心髒 · 恨海情天 · 之死靡他</span>
+                  <span class="pt-stub-rule" aria-hidden="true"></span>
+                  <span class="pt-stub-quote">“你所在之处，<br>是我不得不思念的天涯海角。”</span>
+                </button>
+              </div>
+              <svg class="pt-fibres" data-ticket-fibres aria-hidden="true"></svg>
+            </div>
+          </div>
+        </div>
+          <p class="pt-caption">沿孔撕下票据…</p>
+    </section>
+    <div class="page2-blue-extension" aria-hidden="true"></div>
     <div class="letter-backdrop letter-backdrop-bottom" aria-hidden="true"></div>
   </main>
 
   <main class="page3-view page-view" id="page3" aria-label="恨海情天">
-    <section class="page3-profile" aria-label="雾岛氿个人资料">
+    <section class="page3-profile p3-reveal-item" aria-label="雾岛氿个人资料">
       <div class="page3-banner" role="img" aria-label="雨滴落在玻璃上的蓝白背景"></div>
       <div class="page3-profile-row">
-        <img decoding="async" class="page3-avatar" src="page3-avatar.jpg" width="1080" height="1080" alt="雾岛氿头像">
+        <img decoding="async" class="page3-avatar" src="avatar.jpg" width="1080" height="1080" alt="雾岛氿头像" loading="lazy">
         <div class="page3-identity">
           <h1>雾岛氿 <span aria-label="已认证">✓</span></h1>
           <p class="page3-handle">@Elysia</p>
@@ -123,27 +340,47 @@
         </div>
       </div>
     </section>
-    <button class="page3-subscribe" type="button" aria-label="已订阅">
-       <svg class="subscribe-bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg><span>已訂閱</span><span class="subscribe-chevron" aria-hidden="true"></span>
+    <button class="page3-subscribe p3-reveal-item" type="button" aria-label="已订阅">
+       <svg class="subscribe-bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path></svg><span>已訂閱</span><span class="subscribe-chevron" aria-hidden="true"></span>
     </button>
-    <section class="page3-highlights" aria-label="装饰图片">
-      <div class="page3-highlight"><img decoding="async" src="page3-tile-rain.jpg" width="602" height="1080" alt="雨"><span>RAIN</span></div>
-      <div class="page3-highlight"><img decoding="async" src="page3-tile-wings.jpg" width="1080" height="978" alt="翅膀"><span>WINGS</span></div>
-      <div class="page3-highlight"><img decoding="async" src="page3-tile-lily.jpg" width="488" height="1080" alt="百合"><span>LILY</span></div>
-      <div class="page3-highlight"><img decoding="async" src="page3-tile-eye.jpg" width="810" height="1080" alt="眼睛"><span>EYES</span></div>
+    <section class="page3-highlights p3-reveal-item" aria-label="装饰图片">
+      <button class="page3-highlight" type="button" data-flip="rain" aria-label="RAIN，点击翻转并下雨" aria-pressed="false">
+        <span class="ph-inner">
+          <span class="ph-face ph-front"><img decoding="async" src="page3-tile-rain.jpg" width="602" height="1080" alt="雨" loading="lazy"><span class="ph-label">RAIN</span></span>
+          <span class="ph-face ph-back ph-back-img"><img decoding="async" src="page3-tile-rain-back.jpg" width="540" height="540" alt="燕子、涟漪" loading="lazy"></span>
+        </span>
+      </button>
+      <button class="page3-highlight" type="button" data-flip="wings" aria-label="WINGS，点击翻转" aria-pressed="false">
+        <span class="ph-inner">
+          <span class="ph-face ph-front"><img decoding="async" src="page3-tile-wings.jpg" width="1080" height="978" alt="翅膀" loading="lazy"><span class="ph-label">WINGS</span></span>
+          <span class="ph-face ph-back ph-back-wings"><span class="ph-kao">₊⁺ ꒰১ ✞ ໒꒱ ⁺₊</span></span>
+        </span>
+      </button>
+      <button class="page3-highlight" type="button" data-flip="lily" aria-label="LILY，点击翻转" aria-pressed="false">
+        <span class="ph-inner">
+          <span class="ph-face ph-front"><img decoding="async" src="page3-tile-lily.jpg" width="488" height="1080" alt="百合" loading="lazy"><span class="ph-label">LILY</span></span>
+          <span class="ph-face ph-back ph-back-lily"><img decoding="async" src="lily-back.svg?v=32" width="860" height="860" alt="LILY，gentle, but with intention" loading="lazy"></span>
+        </span>
+      </button>
+      <button class="page3-highlight" type="button" data-flip="eyes" aria-label="EYES，点击翻转" aria-pressed="false">
+        <span class="ph-inner">
+          <span class="ph-face ph-front"><img decoding="async" src="page3-tile-eye.jpg" width="810" height="1080" alt="眼睛" loading="lazy"><span class="ph-label">EYES</span></span>
+          <span class="ph-face ph-back ph-back-img ph-back-eye"><img decoding="async" src="page3-tile-eye-back.webp" width="1080" height="1433" alt="雾岛氿" loading="lazy"></span>
+        </span>
+      </button>
     </section>
-    <a class="page3-url" href="https://github.com/WuDaoJiu/WuDaoJiu_love.git" target="_self" rel="noopener noreferrer">
-      <span aria-hidden="true">⌕</span><span>https://github.com/WuDaoJiu/WuDaoJiu_love.git</span><span class="url-open" aria-hidden="true">↗</span>
+    <a class="page3-url p3-reveal-item" href="https://st.music.163.com/listen-together/share/index.html?roomId=aba0efc15f550ff18dae88b2e43330fa_1792481518&amp;inviterId=1515783083&amp;songId=1829097892" target="_blank" rel="noopener noreferrer">
+      <span aria-hidden="true">⌕</span><span>https://st.music.163.com/listen-together/share/</span><span class="url-open" aria-hidden="true">↗</span>
     </a>
-    <nav class="page3-tabs" aria-label="个人主页分类">
+    <nav class="page3-tabs p3-reveal-item" aria-label="个人主页分类">
       <a href="#virtual-love" class="is-active" aria-current="true">虚恋</a>
       <a href="#sick-love">病恋</a>
       <a href="#dom-white-knight">Dom/白骑士</a>
       <a href="#sub-lower">Sub/下位</a>
     </nav>
-    <section class="page3-post" aria-label="分类动态">
+    <section class="page3-post p3-reveal-item" aria-label="分类动态">
       <header class="page3-post-header">
-        <img decoding="async" class="page3-post-avatar" src="page3-avatar.jpg" width="1080" height="1080" alt="">
+        <img decoding="async" class="page3-post-avatar" src="avatar.jpg" width="1080" height="1080" alt="" loading="lazy">
         <div class="page3-post-author">
           <strong>天使用户0516 <span aria-label="已认证">✓</span></strong>
           <p>@Elysia · 来自伊甸园</p>
@@ -152,58 +389,167 @@
       </header>
       <p class="page3-post-copy" id="page3-post-copy">我们拉勾头抵着头发小小的誓，于是时间有了柔软的刻度。</p>
       <a class="page3-post-image-link" id="page3-post-link" href="https://www.kdocs.cn/l/cd1UnT68kBpa" target="_self" rel="noopener noreferrer" aria-label="打开外部链接">
-        <img decoding="async" class="page3-post-image" id="page3-post-image" src="page3-card-1.jpg" width="1080" height="810" alt="虚恋动态图片">
+        <img decoding="async" class="page3-post-image" id="page3-post-image" src="page3-card-1.jpg" width="1080" height="810" alt="虚恋动态图片" loading="lazy">
       </a>
       <p class="page3-post-hint">点击图片跳转</p>
       <footer class="page3-post-actions" aria-label="动态互动数据">
-        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7H3v4M3.5 11a8.5 8.5 0 1 0 2.2-5.7L3 8" /></svg><b id="page3-reposts">3,102</b></span>
-        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12H9l-5 3z" /></svg><b id="page3-comments">1,240</b></span>
-        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10zm0 9h10.5a2 2 0 0 0 1.9-1.4l1.4-5A2 2 0 0 0 18.9 10H14l.7-3.1A2.4 2.4 0 0 0 12.4 4L7 10z" /></svg><b id="page3-likes">3.5万</b></span>
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7H3v4M3.5 11a8.5 8.5 0 1 0 2.2-5.7L3 8"></path></svg><b id="page3-reposts">3,102</b></span>
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12H9l-5 3z"></path></svg><b id="page3-comments">1,240</b></span>
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10zm0 9h10.5a2 2 0 0 0 1.9-1.4l1.4-5A2 2 0 0 0 18.9 10H14l.7-3.1A2.4 2.4 0 0 0 12.4 4L7 10z"></path></svg><b id="page3-likes">3.5万</b></span>
       </footer>
     </section>
   </main>
   <main class="page4-view page-view" id="page4" aria-label="之死靡他">
-    <section class="page4-top" aria-label="音介与告白">
+    <section class="page4-top p4-reveal-item" aria-label="音介与告白">
       <figure class="page4-card page4-video-card">
-        <video class="page4-video" controls preload="metadata" playsinline poster="page4-poster.jpg?v=20261015" aria-label="音介视频">
+        <video class="page4-video" controls="" preload="metadata" playsinline="" poster="page4-poster.jpg?v=20261015" aria-label="音介视频">
           <source src="page4-video.mp4?v=20261015" type="video/mp4">
           您的浏览器不支持视频播放。
         </video>
         <figcaption>音介</figcaption>
       </figure>
       <figure class="page4-card page4-background-card">
-        <div class="page4-background-art">
+        <div class="page4-background-art" id="page4Flow" role="region" aria-roledescription="轮播" aria-label="告白照片" tabindex="0">
+          <div class="p4-flow-stage" data-stage=""></div>
+          <ul class="p4-flow-items" data-items="">
+            <li><img decoding="async" src="page4-flow-0.jpg?v=1" alt="" loading="lazy"></li>
+            <li><img decoding="async" src="page4-flow-1.jpg?v=4" alt="" loading="lazy"></li>
+            <li><img decoding="async" src="page4-flow-2.jpg?v=4" alt="" loading="lazy"></li>
+            <li><img decoding="async" src="page4-flow-3.jpg?v=4" alt="" loading="lazy"></li>
+            <li><img decoding="async" src="page4-flow-4.jpg?v=4" alt="" loading="lazy"></li>
+            <li><img decoding="async" src="page4-flow-5.jpg?v=4" alt="" loading="lazy"></li>
+          </ul>
           <p>我明白<br>你和其他人的区别了<br>我爱其他人是为了得到爱<br>我爱你是为了让你得到爱</p>
+          <span class="p4-flow-count"><b data-count="">01</b><i>/</i>06</span>
         </div>
         <figcaption>愛</figcaption>
       </figure>
     </section>
 
-    <section class="page4-profile" aria-label="个人资料">
+    <section class="page4-profile p4-reveal-item" aria-label="个人资料">
       <div class="page4-profile-row"><span>昵称</span><strong>雾岛氿</strong></div>
       <div class="page4-profile-divider" aria-hidden="true"></div>
       <div class="page4-profile-row"><span>Sign</span><strong>與我見面吧、在你我燃盡之前。</strong></div>
     </section>
 
-    <nav class="page4-links" aria-label="页面链接">
-      <p class="page4-link-row page4-link-fixed"><img decoding="async" src="page4-tile-1.jpg" width="300" height="300" alt=""><span class="page4-link-copy page4-dots">···</span></p>
-      <a class="page4-link-row" href="https://www.kdocs.cn/l/cvCoJaAbKi8Q" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-2.jpg" width="300" height="300" alt=""><span class="page4-link-copy"><strong>思想殘片</strong><em>：非传统意义的话术参考</em></span></a>
-      <a class="page4-link-row" href="https://www.kdocs.cn/l/coXEO5PXdujW" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-3.jpg" width="300" height="300" alt=""><span class="page4-link-copy"><strong>過往榮譽</strong><em>：头牌卡/天花板卡合集</em></span></a>
-      <a class="page4-link-row" href="https://www.kdocs.cn/l/ckeT7oWMA4eF" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-4.jpg" width="300" height="300" alt=""><span class="page4-link-copy"><strong>伴妳同遊</strong><em>：娱乐性质的王者/燕云</em></span></a>
-      <a class="page4-link-row" href="https://www.kdocs.cn/l/cnWztvmksGfI" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-5.jpg" width="300" height="300" alt=""><span class="page4-link-copy"><strong>最後一吻</strong><em>：受到用心评价时回赠的小礼</em></span></a>
-      <p class="page4-link-row page4-link-fixed"><img decoding="async" src="page4-tile-6.jpg" width="300" height="300" alt=""><span class="page4-link-copy page4-symbol">꧞</span></p>
-      <div class="page4-doodle page4-doodle-rose" aria-hidden="true"><img decoding="async" src="page4-doodle-rose.png" width="179" height="766" alt=""></div>
+    <nav class="page4-links p4-reveal-item" aria-label="页面链接">
+      <p class="page4-link-row page4-link-fixed"><img decoding="async" src="page4-tile-1.jpg" width="300" height="300" alt="" loading="lazy"><span class="page4-link-copy page4-dots">···</span></p>
+      <a class="page4-link-row" href="https://www.kdocs.cn/l/cvCoJaAbKi8Q" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-2.jpg" width="300" height="300" alt="" loading="lazy"><span class="page4-link-copy"><strong>思想殘片</strong><em>：非传统意义的话术参考</em></span></a>
+      <a class="page4-link-row" href="https://www.kdocs.cn/l/coXEO5PXdujW" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-3.jpg" width="300" height="300" alt="" loading="lazy"><span class="page4-link-copy"><strong>過往榮譽</strong><em>：头牌卡/天花板卡合集</em></span></a>
+      <a class="page4-link-row" href="https://www.kdocs.cn/l/ckeT7oWMA4eF" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-4.jpg" width="300" height="300" alt="" loading="lazy"><span class="page4-link-copy"><strong>伴妳同遊</strong><em>：娱乐性质的王者/燕云</em></span></a>
+      <a class="page4-link-row" href="https://www.kdocs.cn/l/cnWztvmksGfI" target="_self" rel="noopener noreferrer"><img decoding="async" src="page4-tile-5.jpg" width="300" height="300" alt="" loading="lazy"><span class="page4-link-copy"><strong>最後一吻</strong><em>：受到用心评价时回赠的小礼</em></span></a>
+      <button class="page4-link-row page4-link-fixed page4-symbol-row" type="button" id="page4SymbolBtn" aria-label="点击切换颜文字"><img decoding="async" src="page4-tile-6.jpg" width="300" height="300" alt="" loading="lazy"><span class="page4-link-copy page4-symbol" id="page4Symbol">꧞</span></button>
+      <div class="page4-doodle page4-doodle-rose" aria-hidden="true"><img decoding="async" src="page4-doodle-rose.png" width="179" height="766" alt="" loading="lazy"></div>
     </nav>
-    <div class="page4-doodle page4-doodle-cat" aria-hidden="true"><img decoding="async" src="page4-doodle-cat.png" width="1060" height="789" alt=""></div>
+    <div class="page4-doodle page4-doodle-cat" aria-hidden="true"><img decoding="async" src="page4-doodle-cat.png?v=2" width="255" height="279" alt="" loading="lazy"></div>
   </main>
 
-  <nav class="bottom-nav" aria-label="页面导航" hidden>
-    <a href="#welcome" data-page="welcomePage">娓娓道來</a>
-    <a href="#page2" data-page="page2" class="selected">您好幸識</a>
+  <main class="dm-view page-view" id="dmPage" aria-label="与天使用户0516的私信">
+    <div class="dm-background" aria-hidden="true"></div>
+    <header class="dm-header">
+      <button class="dm-back" id="dmBack" type="button" aria-label="返回个人主页">‹</button>
+      <div class="dm-heading">
+        <strong>天使用户0516</strong>
+      </div>
+      <span class="dm-header-mark" aria-hidden="true">✝</span>
+    </header>
+    <section class="dm-messages" id="dmMessages" aria-live="polite" aria-label="私信内容"></section>
+    <div class="dm-typing" id="dmTyping" hidden="">
+      <img class="dm-typing-avatar" src="dm-avatar-left.jpg" width="1080" height="1080" alt="" loading="lazy">
+      <span class="dm-typing-bubble"><i></i><i></i><i></i></span>
+    </div>
+    <div class="dm-presence-dock" id="dmPresenceDock" hidden=""></div>
+    <form class="dm-composer" id="dmComposer" autocomplete="off">
+      <label class="dm-input-wrap">
+        <span class="sr-only">输入私信</span>
+        <input id="dmInput" type="text" maxlength="300" placeholder="等待回应…" disabled="">
+      </label>
+      <button id="dmSend" type="submit" aria-label="发送" disabled="">↑</button>
+    </form>
+  </main>
+
+  <nav class="bottom-nav" aria-label="页面导航">
+    <a href="#welcome" data-page="welcomePage" class="">娓娓道來</a>
+    <a href="#page2" data-page="page2" class="selected">水母心髒</a>
     <a href="#page3" data-page="page3">恨海情天</a>
-    <a href="#page4" data-page="page4">之死靡他</a>
-  </nav>
-  <script src="script.js?v=20261015E2"></script>
+    <a href="#page4" data-page="page4">之死靡他</a></nav>
+  <script src="script.js?v=20261023_OPT2"></script><script src="pt-tear.js?v=20261023_TEAR28"></script><script src="jelly-deep.js?v=20261023_JELLY_V49e"></script><div class="lightbox" role="dialog" aria-label="大图预览"><button type="button" class="lightbox-close" aria-label="关闭"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg></button><img alt=""></div>
+  <!-- page4-carousel.js 改为按需懒加载 -->
+  <script>
+  /* 右上角「愛」卡片的流动轮播：改成懒加载——WebGL2 库只在第 4 页真正可见时才拉取，
+     避免它在首屏就把渲染进程拖死（此前 load 事件永远不完成，页面卡在开屏点不动） */
+  (function () {
+    var el = document.getElementById('page4Flow');
+    var page = document.getElementById('page4');
+    if (!el || !page) return;
+    var mounted = false, loading = false, api = null;
+    function loadCarousel(cb) {
+      if (window.FlexCarousel) { cb(); return; }
+      if (loading) return;
+      loading = true;
+      var d = document.createElement('script');
+      d.src = 'page4-flow-data.js?v=20261023B3';
+      d.async = true;
+      d.onload = d.onerror = function () {
+        var s = document.createElement('script');
+        s.src = 'page4-carousel.js?v=20261023R18';
+        s.async = true;
+        s.onload = function () { loading = false; cb(); };
+        s.onerror = function () { loading = false; };
+        (document.body || document.head).appendChild(s);
+      };
+      (document.body || document.head).appendChild(d);
+    }
+    function doMount() {
+      if (mounted || !window.FlexCarousel) return;
+      var stage = el.querySelector('[data-stage]');
+      if (!stage) return;
+      api = window.FlexCarousel.mount(el, {
+        stage: stage,
+        cardHeight: 1,
+        gap: 0,
+        radius: 6,
+        fit: 'square'
+      });
+      mounted = !!api;
+    }
+    function tryMount() {
+      if (mounted) return;
+      if (!page.classList.contains('is-visible')) return;
+      loadCarousel(function () { doMount(); if (api) api.resize(); });
+    }
+    /* 空闲时预先挂载：等用户真的切到页面四时，canvas 里已经是最终画面，
+       不再需要“占位图 → 透镜”两套渲染交替，也就没有裁剪不一样的闪现 */
+    function preMount() {
+      if (mounted || api) return;
+      loadCarousel(function () { doMount(); });
+    }
+    /* 空闲时预取轮播图数据，避免首次进入页面四才现场拉 800KB */
+    function preloadFlowData() {
+      if (window.__P4_FLOW_DATA) return;
+      if (document.querySelector('script[data-flow-data]')) return;
+      var p = document.createElement('script');
+      p.src = 'page4-flow-data.js?v=20261023B3';
+      p.async = true;
+      p.setAttribute('data-flow-data', '');
+      (document.body || document.head).appendChild(p);
+    }
+    function warmUp() { preloadFlowData(); setTimeout(preMount, 400); }
+    function scheduleWarmUp() {
+      if (window.requestIdleCallback) { window.requestIdleCallback(warmUp, { timeout: 3000 }); }
+      else { setTimeout(warmUp, 1200); }
+    }
+    if (document.readyState === 'complete') { scheduleWarmUp(); }
+    else { window.addEventListener('load', scheduleWarmUp, { once: true }); }
+    /* 一旦有交互（任意点击）就提前加载，免得空闲预挂载还没跑完就切到页面四 */
+    document.addEventListener('pointerdown', function () { if (!mounted) { loadCarousel(doMount); } }, { once: true, passive: true });
+    new MutationObserver(function () {
+      if (page.classList.contains('is-visible') && api) { api.resize(); tryMount(); return; }
+      tryMount();
+    }).observe(page, { attributes: true, attributeFilter: ['class'] });
+    tryMount();
+  })();
+  </script>
   <script>
   /* 整行适配：字体或屏幕差异导致换行时，自动微缩这一句的字号，保证一句一行 */
   (function () {
@@ -236,5 +582,6 @@
     window.addEventListener('resize', boot);
   })();
   </script>
-</body>
-</html>
+
+    <div class="p2-deck-veil" id="p2DeckVeil" aria-hidden="true"></div>
+</body></html>

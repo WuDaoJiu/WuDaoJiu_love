@@ -17,6 +17,9 @@ body {
   margin: 0;
   min-width: 320px;
   overflow-x: hidden;
+  /* [fix-v49c] 撤回 v49b 的 overscroll-behavior-y: none。
+     安卓 WebView 上它会连带把整个文档的纵向滚动一起禁掉（所有页面滑不动），
+     代价远大于收益。闪白改由导航栏镜像模糊层 + 画布兜底色解决。 */
   background: var(--paper);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -79,11 +82,11 @@ a {
 .profile-avatar-wrap {
   position: absolute;
   left: 28px;
-  bottom: -48px;
+  bottom: -60px;
   z-index: 3;
-  width: 96px;
-  height: 96px;
-  padding: 5px;
+  width: 120px;
+  height: 120px;
+  padding: 6px;
   border-radius: 50%;
   background: rgba(255, 250, 252, 0.92);
 }
@@ -124,6 +127,12 @@ a {
   background: var(--pink);
   color: #fff;
 }
+
+.action-button { transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease; }
+.action-button .action-label { display: inline-block; transition: opacity 190ms ease; }
+/* 「已关注」二次点击：只有文字淡出淡入，按钮底色/位置完全不动 */
+.action-button.is-swapping { opacity: 1; transform: none; }
+.action-button.is-swapping .action-label { opacity: .1; }
 
 /* 名字保留主视觉，其余信息收窄一级 */
 .profile-content h1 {
@@ -310,7 +319,7 @@ a {
 /* The second view shares the welcome page shell so music survives navigation. */
 @font-face {
   font-family: "SiteKai";
-  src: url("site-kai-subset.woff?v=1") format("woff");
+  src: url("site-kai-subset.woff2?v=1") format("woff2"), url("site-kai-subset.woff?v=1") format("woff");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -320,6 +329,11 @@ a {
 .welcome-view.is-visible, .page-view.is-visible { display: block; }
 .site-body .bottom-nav[hidden], .site-body .music-bar[hidden] { display: none !important; }
 .site-body:has(.page-view.is-visible) { padding-bottom: 54px; }
+
+/* [perf] 开屏遮罩可见时，隐藏 page2 雨滴 canvas 避免白渲染 */
+.welcome-view.is-visible ~ .page-view .page2-rain-canvas {
+  display: none;
+}
 .music-bar {
   position: fixed;
   z-index: 20;
@@ -334,38 +348,58 @@ a {
   border-radius: 24px;
   background: rgba(255, 255, 255, .9);
   box-shadow: 0 3px 14px rgba(39, 53, 66, .08);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   transition: padding 180ms ease;
 }
 .music-toggle {
   display: grid;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
   place-items: center;
-  border: 0;
+  /* [fix 2026-10-22] 小圆整体换成更浅的蓝 */
+  border: .5px solid rgba(150, 197, 246, .92);
   border-radius: 50%;
-  background: #e8f0f5;
-  color: #42637b;
+  background: #f8fbff;
+  color: #6fa8e9;
+  box-shadow: 0 1px 6px rgba(111, 168, 233, .22);
 }
-.music-note { display: block; font: 19px/1 Georgia, serif; }
+/* [fix 2026-10-22] 全站字体规则会把这个字形换成 SiteLove 的兜底字体，落点不可控；
+   钉回带 ♫ 的字体。偏移量为实测值：字形墨迹重心比盒中心低 0.26px（-0.3 抵销），
+   水平方向盒宽 9.13px 居中时右侧多出 0.5px（-0.5 抵销）。 */
+.site-body .music-bar .music-note {
+  display: block;
+  font: 12px/1 Georgia, serif;
+  font-family: Georgia, "DejaVu Serif", serif !important;
+  translate: -0.5px -0.3px;
+}
 .music-bar.is-playing .music-note { animation: music-spin 3.2s linear infinite; }
 .music-bar.is-paused .music-note { animation-play-state: paused; }
 .music-controls { display: flex; align-items: center; gap: 3px; }
 .music-controls[hidden] { display: none; }
-.music-bar.is-collapsed { width: 42px; overflow: hidden; }
+/* [fix 2026-10-22] 收起态：容器和圆按钮同心同尺寸。
+   原来是 42px 宽装 22px 按钮，圆点贴在左边、右边空掉一截，看起来就是歪的。 */
+.music-bar.is-collapsed {
+  width: 32px;
+  min-height: 32px;
+  padding: 4px;
+  gap: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
 @keyframes music-spin { to { transform: rotate(360deg); } }
 .music-btn {
-  min-height: 25px;
-  padding: 0 8px;
+  min-height: 23px;
+  padding: 0 7px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
-  color: #71899d;
-  font: 11px/1 "Songti SC", "Noto Serif CJK SC", serif;
+  color: #5a8dcc;
+  font: 10.5px/1 "Songti SC", "Noto Serif CJK SC", serif;
   white-space: nowrap;
 }
-.music-btn.active { background: #dceaf3; color: #37566d; }
+.music-btn.active { background: #e3f2ff; color: #2b5fa8; }
 .pause-btn { min-width: 27px; padding: 0; font-family: sans-serif; font-size: 12px; }
 .site-body:not(.page2-active) .letter-backdrop { display: none; }
 .letter-page {
@@ -408,6 +442,24 @@ a {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .14) 22%, rgba(0, 0, 0, .52) 46%, rgba(0, 0, 0, .9) 69%, #000 88%, #000 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .14) 22%, rgba(0, 0, 0, .52) 46%, rgba(0, 0, 0, .9) 69%, #000 88%, #000 100%);
 }
+.page2-blue-extension {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  /* [fix 2026-10-22] 由固定 400px 留白改为弹性填充 */
+  min-height: 0;
+  flex: 1 1 auto;
+  pointer-events: none;
+  /* [fix-v49a] 水母画布现在一直铺到这里，上面这一段完全透明，让水母透出来；
+     只在最底部留一截天蓝实色收尾，不做成整块色块。 */
+  background: linear-gradient(
+    180deg,
+    rgba(168, 208, 244, 0) 0%,
+    rgba(168, 208, 244, 0) 34%,
+    rgba(163, 206, 247, 0.55) 62%,
+    #94c9ff 78%,
+    #7ebbf8 100%);
+}
 .letter-heading { display: flex; align-items: center; gap: 11px; color: #242326; }
 .letter-heading h1 { margin: 0; color: #242326; font: 700 30px/1.2 "SiteKai", "Aozora Mincho", "KaiTi", "STKaiti", "Kaiti SC", serif; }
 .notice-section h2 { color: #242326; font-family: "SiteKai", "Aozora Mincho", "KaiTi", "STKaiti", "Kaiti SC", serif; font-weight: 700; }
@@ -437,7 +489,7 @@ a {
 #page2.is-visible .image-two img { animation-delay: .2s; }
 #page2.is-visible .image-three img { animation-delay: .35s; }
 .image-one img { object-position: 48% center; }
-.image-two img { object-position: center 44%; }
+.image-two img { object-position: center 47%; }
 .image-three img { object-position: 42% center; }
 @keyframes image-reveal { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
  .page2-reveal { opacity: 0; transform: translateY(24px); transition: opacity 700ms ease, transform 700ms cubic-bezier(.22, .61, .36, 1); }
@@ -543,7 +595,7 @@ body.lightbox-open { overflow: hidden; }
 .future-page { min-height: calc(100svh - 54px); width: 100%; max-width: 540px; margin: 0 auto; padding: 35vh 20px; color: #315e91; text-align: center; font: 26px "Songti SC", serif; }
 @font-face {
   font-family: "Page3Kai";
-  src: url("calligraphy.ttf") format("truetype");
+  src: url("calligraphy.woff2") format("woff2"), url("calligraphy.ttf") format("truetype"); /* 克莱尔修：这是 ttf，原来标成 woff，顺手改正（跟卡死无关） */
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -592,11 +644,113 @@ body.lightbox-open { overflow: hidden; }
 }
 .subscribe-bell { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .subscribe-chevron { position: relative; width: 12px; height: 12px; margin-left: 0; transform: translateY(-2px) rotate(45deg); border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor; }
-.page3-highlights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; padding: 14px 22px 0; }
-.page3-highlight { position: relative; min-width: 0; aspect-ratio: 1; overflow: hidden; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .22); box-shadow: 0 9px 22px rgba(35, 55, 75, .18), 0 2px 6px rgba(35, 55, 75, .08); isolation: isolate; }
-.page3-highlight::after { position: absolute; z-index: 1; inset: 0; border-radius: inherit; background: linear-gradient(135deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .03) 48%, rgba(27, 44, 193, .08)); content: ""; pointer-events: none; }
-.page3-highlight img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); }
-.page3-highlight span { position: absolute; z-index: 2; right: 7px; bottom: 7px; left: 7px; padding: 0; color: #fff; font: 700 10px/1 Arial, sans-serif; text-align: left; letter-spacing: .3px; text-shadow: 0 1px 4px rgba(20, 35, 55, .65); }
+/* 缩略图一排：左右对齐 18px，与其他块齐 */
+.page3-highlights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; padding: 14px 18px 0; }
+/* 可翻转卡面：外层只负责透视，框体、圆角、阴影都放到两个面上，翻面时整个框一起转 */
+.page3-highlight {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  isolation: isolate;
+  perspective: 680px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 260ms ease;
+}
+.page3-highlight:active { transform: scale(.97); }
+.ph-inner {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transition: transform 780ms cubic-bezier(.36, .66, .3, 1);
+  
+}
+.page3-highlight.is-flipped .ph-inner { transform: rotateY(180deg); }
+.ph-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 9px 22px rgba(35, 55, 75, .18), 0 2px 6px rgba(35, 55, 75, .08);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.ph-front { background: rgba(255, 255, 255, .22); }
+.ph-front::after {
+  position: absolute; z-index: 1; inset: 0; border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,.24), rgba(255,255,255,.04) 48%, rgba(27,44,193,.09));
+  box-shadow: inset 0 0 0 .5px rgba(255,255,255,.55);
+  content: ""; pointer-events: none;
+}
+.ph-front img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); }
+.ph-label { position: absolute; z-index: 2; right: 7px; bottom: 7px; left: 7px; color: #fff; font-family: var(--site-font) !important; font-size: 10px; font-weight: 700 !important; line-height: 1; text-align: left; letter-spacing: .3px; text-shadow: 0 1px 4px rgba(20, 35, 55, .65); font-synthesis: none; }
+/* 背面：浅蓝玻璃卡，与整页冷调一致 */
+.ph-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 8px;
+  border: .5px solid rgba(255, 255, 255, .92);
+  background: linear-gradient(158deg, #f4fafe, #e3effb 62%, #dcebf8);
+  text-align: center;
+}
+.ph-back::after {
+  position: absolute; inset: 0; border-radius: inherit; content: ""; pointer-events: none;
+  background: radial-gradient(120% 90% at 20% 0%, rgba(255,255,255,.85), transparent 62%);
+}
+/* WINGS 卡背面：纯白底 + 中央颜文字，不带渐变不带描边 */
+.ph-back-wings {
+  border: 0;
+  background: #ffffff;
+  padding: 0;
+}
+.ph-back-wings::after { content: none; }
+.ph-kao {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: #8aa8c2;
+  font-family: var(--site-font);
+  font-size: 8.5px;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+/* RAIN 卡背面：燕子速写图，去掉原来的渐变纸底 */
+.ph-back-img {
+  display: block;
+  padding: 0;
+  border: .5px solid rgba(255, 255, 255, .92);
+  background: #fcfdff;
+}
+.ph-back-img::after { content: none; }
+.ph-back-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ph-back b { position: relative; z-index: 1; color: #6f93b4; font-family: var(--site-font) !important; font-size: 10px; font-weight: 700 !important; line-height: 1.2; letter-spacing: .18em; font-synthesis: none; }
+.ph-back i { position: relative; z-index: 1; color: #7d8791; font-family: var(--site-font) !important; font-size: 8.5px; font-weight: 400 !important; line-height: 1.45; font-style: normal; letter-spacing: .01em; font-synthesis: none; }
+/* 窄屏时卡面变小，背面文字同步收紧，避免溢出 */
+@media (max-width: 374px) {
+  .ph-kao { font-size: 7.5px; }
+}
+@media (max-width: 374px) {
+  .ph-back { gap: 3px; padding: 7px 6px; }
+  .ph-back b { font-size: 9px; letter-spacing: .12em; }
+  .ph-back i { font-size: 7.5px; line-height: 1.35; }
+}
 .page3-url { display: flex; min-width: 0; align-items: center; gap: 10px; margin: 16px 18px 0; padding: 0 2px 11px; border-bottom: 1px solid #e5e6e8; color: #6e7378; font: 600 11.5px/1.35 Arial, sans-serif; text-decoration: none; }
 .page3-url > span:first-child { flex: 0 0 auto; font-size: 18px; }
 .page3-url > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1096,6 +1250,7 @@ body.lightbox-open { overflow: hidden; }
 }
 
 .page4-background-art {
+  position: relative;
   display: flex;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -1103,10 +1258,67 @@ body.lightbox-open { overflow: hidden; }
   justify-content: center;
   overflow: hidden;
   border-radius: 6px;
-  background: url("page4-background.jpg") center / cover no-repeat;
+  background: #ffffff;
+  cursor: grab;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.page4-background-art[data-dragging] {
+  cursor: grabbing;
+}
+
+/* 液态透镜舞台：canvas 由脚本挤入，绝对铺满卡片 */
+.page4-background-art .p4-flow-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.page4-background-art .p4-flow-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* JS 未就绪或 WebGL2 不可用时的降级九宫格 */
+.page4-background-art .p4-flow-items {
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  width: 100%;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+}
+
+.page4-background-art:not(.is-live) .p4-flow-items {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  z-index: 1;
+}
+
+.page4-background-art .p4-flow-items img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.page4-background-art.is-live .p4-flow-items {
+  display: none;
+}
+
+/* 四行告白字压在画布上，不吃拖拽事件 */
 .page4-background-art p {
+  position: relative;
+  z-index: 2;
   margin: 0;
   padding: 6px;
   color: var(--page4-blue);
@@ -1115,6 +1327,35 @@ body.lightbox-open { overflow: hidden; }
   line-height: 1.9;
   text-align: center;
   overflow-wrap: anywhere;
+  pointer-events: none;
+  text-shadow: 0 0 4px rgba(255,255,255,.75);
+}
+
+.page4-background-art .p4-flow-count {
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  z-index: 2;
+  color: rgba(27,44,193,.55);
+  font-size: 9px;
+  letter-spacing: .1em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.page4-background-art.is-live .p4-flow-count {
+  opacity: 1;
+}
+
+.page4-background-art .p4-flow-count b {
+  font-weight: 600;
+}
+
+.page4-background-art .p4-flow-count i {
+  margin: 0 2px;
+  font-style: normal;
+  opacity: .5;
 }
 
 .page4-profile {
@@ -1220,9 +1461,8 @@ body.lightbox-open { overflow: hidden; }
 .page4-link-row .page4-dots { font-size: 20px; font-weight: 400; line-height: 1; letter-spacing: .26em; margin-right: -.26em; }
 .page4-link-row .page4-symbol {
   color: #111;
-  font-family: "Noto Sans Symbols 2", "Noto Sans Symbols", "Segoe UI Symbol", serif;
-  font-size: 20px;
-  font-weight: 300;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1;
   font-synthesis: none;
   -webkit-text-stroke: 0;
@@ -1254,8 +1494,15 @@ body.lightbox-open { overflow: hidden; }
 }
 
 /* The rose art tops out around #c6c6c6, so it needs a bigger lift than the cat. */
+/* 图片本身是纯白，在浅底上会消失；只留一层细轮廓 + 一点极淡的扩散，不糊成一团光球 */
 .page4-doodle-cat img {
-  filter: brightness(1.1);
+  transform: scaleX(-1);
+  /* 本体纯白：先用极紧的白光把边缘点亮，外面再包两层浅蓝光晕 */
+  filter: brightness(1.06) contrast(1.04)
+          drop-shadow(0 0 .7px rgba(255,255,255,.95))
+          drop-shadow(0 0 1.4px rgba(126,182,255,.78))
+          drop-shadow(0 0 4px rgba(154,200,255,.52))
+          drop-shadow(0 2px 8px rgba(152,192,246,.30));
 }
 
 .page4-doodle-rose {
@@ -1309,23 +1556,31 @@ body.lightbox-open { overflow: hidden; }
 
 /* Local Chinese sans-serif fonts keep phone themes from replacing the typography. */
 /* 小氿的主题字体：虚拟的爱正在输入中（取自设备 /system/fonts/SysFont-Regular.ttf，已子集化） */
+/* 代码雨专用字库：从站点主字体 site-love-src 子集化而来，只含雨粒用到的 123 个字 */
+@font-face {
+  font-family: "SiteRain";
+  src: url("site-rain-subset.woff2?v=1") format("woff2"), url("site-rain-subset.woff?v=1") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 @font-face {
   font-family: "SiteLove";
-  src: url("site-love.woff?v=3") format("woff");
+  src: url("site-love-v9.woff2?v=1") format("woff2"), url("site-love-v9.woff?v=1") format("woff");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "SiteHeiti";
-  src: url("site-heiti-regular-v2.otf") format("opentype");
+  src: url("site-heiti-regular-v3.woff2?v=5") format("woff2"), url("site-heiti-regular-v3.otf?v=5") format("opentype");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "SiteHeiti";
-  src: url("site-heiti-bold-v2.otf") format("opentype");
+  src: url("site-heiti-bold-v3.woff2?v=5") format("woff2"), url("site-heiti-bold-v3.otf?v=5") format("opentype");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -1344,9 +1599,10 @@ body,
 .page4-profile-row > span, .page4-profile-row:first-child > strong) {
   font-weight: 700 !important;
 }
-/* Preserve the already refined decorative glyph independently of text fonts. */
+/* 颜文字完全继承全站字体，不再单独指定，避免字形/字重不一致 */
 .site-body .page4-symbol {
-  font-family: "Noto Sans Symbols 2", "Noto Sans Symbols", "Segoe UI Symbol", serif !important;
+  font-family: inherit !important;
+  letter-spacing: .01em;
 }
 
 @media (max-width: 390px) {
@@ -1420,6 +1676,9 @@ body,
 .p1-loaded .profile-hero {
   animation: p1-rise 580ms cubic-bezier(.22,.61,.36,1) both;
 }
+.p1-loaded .profile-actions {
+  animation: p1-rise 460ms cubic-bezier(.22,.61,.36,1) 40ms both;
+}
 .p1-loaded .profile-content h1 {
   animation: p1-rise 540ms cubic-bezier(.22,.61,.36,1) 70ms both;
 }
@@ -1461,9 +1720,6 @@ body,
 }
 
 /* Bottom nav 滑动指示条 */
-.bottom-nav {
-  position: relative;
-}
 .bottom-nav-indicator {
   position: absolute;
   bottom: 0;
@@ -1471,7 +1727,14 @@ body,
   background: var(--pink);
   border-radius: 2px 2px 0 0;
   pointer-events: none;
-  transition: left 260ms cubic-bezier(.34,1.2,.64,1), width 260ms cubic-bezier(.34,1.2,.64,1), opacity 200ms ease;
+  opacity: 0;
+  visibility: hidden;
+  
+  transition: left 260ms cubic-bezier(.34,1.2,.64,1), width 260ms cubic-bezier(.34,1.2,.64,1), opacity 180ms ease;
+}
+.bottom-nav-indicator.is-on {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* 按钮 / 卡片微交互 */
@@ -1508,9 +1771,12 @@ a.page4-link-row {
     transform: translateY(-2px);
     box-shadow: 0 8px 22px rgba(39,53,66,.11);
   }
-  .page3-highlight:hover {
-    transform: translateY(-3px) scale(1.03);
+  .page3-highlight:hover .ph-face {
     box-shadow: 0 12px 26px rgba(35,55,75,.22), 0 3px 8px rgba(35,55,75,.09);
+  }
+  .page3-highlight:hover .ph-front img {
+    transform: scale(1.16);
+    transition: transform 420ms ease;
   }
   a.page4-link-row:hover {
     opacity: .7;
@@ -1565,6 +1831,7 @@ a.page4-link-row {
   position: relative;
   z-index: 1;
   margin: 0;
+  /* 静态 HTML 不再写死整句：标题完全由脚本逐字生成，避免刷新瞬间闪出整句再重打 */
   min-height: 1.5em;
   font-size: clamp(25px, 7vw, 34px);
   font-weight: 600;
@@ -1587,8 +1854,8 @@ a.page4-link-row {
 .intro-hint {
   position: relative;
   z-index: 1;
-  margin: 0;
-  padding: 8px 4px;
+  margin: -19px 0 0;
+  padding: 4px 4px;
   border: 0;
   background: none;
   color: var(--ink);
@@ -1598,7 +1865,7 @@ a.page4-link-row {
   text-indent: .42em;
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 1100ms ease, transform 1100ms ease;
+  transition: opacity 620ms ease, transform 620ms ease;
   cursor: pointer;
 }
 .intro-hint.show {
@@ -1671,7 +1938,7 @@ body.intro-locked { overflow: hidden; }
     inset 0 0 0 1px rgba(255, 255, 255, .06);
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%) url(#liquid);
+  /* [perf] 移除 backdrop-filter + feTurbulence：每帧全屏重算噪声，直接冻死主线程 */
   overflow: hidden;
   isolation: isolate;
   transition: opacity 620ms ease, transform 620ms ease, visibility 620ms ease;
@@ -1740,7 +2007,7 @@ body.intro-locked { overflow: hidden; }
 .ask-line-key {
   margin-top: 14px;
   font-size: clamp(15.5px, 4.9vw, 19.5px);
-  letter-spacing: .05em;
+  letter-spacing: normal;
   color: #14315f;
 }
 .ask-actions {
@@ -1869,4 +2136,2543 @@ body.intro-locked { overflow: hidden; }
   .intro-ask.is-shown .ask-actions,
   .ask-card-reply.is-shown .reply-line,
   .ask-card-reply.is-shown .ask-btn { animation: none; opacity: 1; transform: none; }
+}
+
+/* ===== 私信页：天使用户0516 ===== */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.action-button.is-followed {
+  border-color: #dbe8f3;
+  background: rgba(245, 250, 255, .94);
+  color: #6d8498;
+}
+.action-button.follow-missing { animation: none; }
+@keyframes follow-missing {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-1px); }
+  65% { transform: translateX(1px); }
+}
+
+.site-body.dm-active { padding-bottom: 0 !important; overflow: hidden; background: #fbfcfd; }
+.dm-view {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 520px;
+  margin: 0 auto;
+  overflow: hidden;
+  color: #50565c;
+  background: #fbfcfd;
+  isolation: isolate;
+}
+.dm-view.is-visible { display: flex; flex-direction: column; animation: page-enter 460ms cubic-bezier(.22, .61, .36, 1) both; }
+.dm-background {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: #fff url("dm-background-lilies.jpg?v=3") center center / contain no-repeat;
+  opacity: .96;
+}
+.dm-view::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.36) 0%, rgba(255,255,255,.08) 30%, rgba(255,255,255,.06) 72%, rgba(255,255,255,.42) 100%);
+}
+.dm-header {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  min-height: calc(54px + env(safe-area-inset-top));
+  padding: calc(9px + env(safe-area-inset-top)) 58px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(214, 222, 229, .72);
+  background: rgba(255, 255, 255, .68);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow: 0 4px 20px rgba(85, 102, 120, .035);
+}
+.dm-back {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #7c8d9b;
+  font-family: var(--site-font) !important;
+  font-size: 29px;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+.dm-back:active { background: rgba(222, 234, 244, .54); transform: translateY(-50%) scale(.94); }
+.dm-heading { height: 34px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.dm-heading strong { color: #4d555c; font-size: 16.5px; font-weight: 600; letter-spacing: .05em; line-height: 20px; }
+.dm-heading span { color: #adb5bb; font-size: 10px; letter-spacing: .28em; text-indent: .28em; }
+.dm-header-mark {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  color: #c9e5fb;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Arial Unicode MS", serif !important;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: 0 0 5px rgba(135, 198, 244, .40);
+}
+.dm-messages {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 28px 15px 24px;
+  scroll-behavior: smooth;
+}
+.dm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 20px;
+  opacity: 0;
+  transform: translateY(9px);
+  animation: dm-message-in 2040ms cubic-bezier(.22, .61, .36, 1) forwards;
+}
+.dm-row-right { flex-direction: row-reverse; }
+.dm-bubbles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+  max-width: min(82%, 300px);
+  min-width: 0;
+}
+.dm-row-right .dm-bubbles { align-items: flex-end; }
+.dm-avatar {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  margin-top: 0;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 0;
+  box-shadow: 0 2px 7px rgba(72, 90, 109, .10);
+}
+/* 参考图私信气泡宋体：固定本地字体，避免手机主题替换 */
+@font-face {
+  font-family: "DmSerif";
+  src: url("site-dm-serif.woff2?v=1") format("woff2"), url("site-dm-serif.woff?v=1") format("woff"); /* 克莱尔修：这是 woff，原来标成 truetype，顺手改正（跟卡死无关） */
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+.dm-bubble {
+  position: relative;
+  max-width: 100%;
+  opacity: 0;
+  transform: translateY(7px);
+  animation: dm-bubble-in 1560ms cubic-bezier(.22, .61, .36, 1) both;
+  min-height: 31px;
+  padding: 7px 16px 7px 18px;
+  border: 0;
+  border-radius: 1px;
+  background: #fff;
+  color: #565a5e;
+  font-family: var(--site-font) !important;
+  font-size: 13px;
+  font-weight: 400 !important;
+  line-height: 18px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  word-break: normal;
+  box-shadow: 0 3px 5px rgba(45, 54, 64, .10), 0 1px 1px rgba(45, 54, 64, .035);
+}
+.dm-bubble::before {
+  content: "✝";
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-60%);
+  color: #c9e5fb;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Arial Unicode MS", serif !important;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: 0 0 5px rgba(135, 198, 244, .40);
+  pointer-events: none;
+}
+.dm-bubble::after { content: none; }
+.dm-row-right .dm-bubble { padding: 7px 16px 7px 18px; }
+.dm-row-right .dm-bubble::before {
+  color: #cbd0d5;
+  text-shadow: 0 0 4px rgba(137, 146, 155, .10);
+}
+@keyframes dm-message-in { to { opacity: 1; transform: none; } }
+@keyframes dm-bubble-in { to { opacity: 1; transform: none; } }
+@keyframes dm-presence-float-in {
+  0% { opacity: 0; transform: translateY(16px) scale(.94); filter: blur(3px); }
+  28% { opacity: .78; filter: blur(1.2px); }
+  62% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes dm-presence-breath {
+  0%, 100% { transform: translateY(0); box-shadow: 0 3px 5px rgba(45,54,64,.10), 0 1px 1px rgba(45,54,64,.035); }
+  50% { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(45,54,64,.12), 0 2px 4px rgba(201,229,251,.28); }
+}
+.dm-row.no-message-motion,
+.dm-row.no-message-motion .dm-bubble {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+
+.dm-presence-dock {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  padding: 9px 14px 7px;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.52));
+}
+.dm-presence-dock[hidden] { display: none; }
+.dm-presence-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+  opacity: 0;
+  animation: dm-presence-float-in 860ms cubic-bezier(.16, 1, .3, 1) 110ms forwards;
+  
+}
+.dm-presence {
+  position: relative;
+  min-width: 154px;
+  padding: 13px 28px;
+  overflow: hidden;
+  border: .5px solid rgba(255,255,255,.96);
+  border-radius: 16px;
+  background: linear-gradient(158deg, rgba(255,255,255,.68), rgba(224,239,255,.38));
+  color: #6689ad;
+  font-size: 13px;
+  letter-spacing: .18em;
+  text-indent: .18em;
+  box-shadow: 0 3px 5px rgba(45,54,64,.10), 0 1px 1px rgba(45,54,64,.035);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+  transition: transform 220ms ease, opacity 280ms ease;
+  animation: dm-presence-breath 3.6s .85s ease-in-out infinite;
+}
+.dm-presence::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(100% 100% at 25% 0%, rgba(255,255,255,.62), transparent 58%);
+}
+.dm-presence:active { transform: scale(.97); }
+.dm-presence.is-used { opacity: 0; transform: translateY(-5px); pointer-events: none; }
+
+.dm-view, .dm-view button, .dm-view input, .dm-view .dm-bubble {
+  font-family: var(--site-font) !important;
+}
+.dm-typing {
+  position: absolute;
+  left: 15px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.dm-typing[hidden] { display: none; }
+.dm-typing-avatar { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; border: 0; box-shadow: 0 2px 8px rgba(72,90,109,.12); }
+.dm-typing-bubble { position: relative; display: flex; align-items: center; gap: 5px; min-width: 58px; min-height: 31px; padding: 7px 16px 7px 18px; border: 0; border-radius: 1px; background: #fff; box-shadow: 0 3px 5px rgba(45,54,64,.10), 0 1px 1px rgba(45,54,64,.035); }
+.dm-typing-bubble::before { content: "✝"; position: absolute; left: 2px; top: 50%; transform: translateY(-60%); color: #c9e5fb; font: 20px/1 "Segoe UI Symbol", "Noto Sans Symbols 2", "Arial Unicode MS", serif; text-shadow: 0 0 5px rgba(135,198,244,.40); }
+.dm-typing-bubble i { width: 4px; height: 4px; border-radius: 50%; background: #b5cfe2; animation: dm-dot 1.2s infinite ease-in-out; }
+.dm-typing i:nth-child(2) { animation-delay: .16s; }
+.dm-typing i:nth-child(3) { animation-delay: .32s; }
+@keyframes dm-dot { 0%, 65%, 100% { opacity: .3; transform: translateY(0); } 32% { opacity: 1; transform: translateY(-3px); } }
+
+.dm-composer {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(215,223,229,.74);
+  background: rgba(255,255,255,.76);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+.dm-input-wrap { flex: 1 1 auto; }
+.dm-input-wrap input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(210, 221, 234, .92);
+  border-radius: 18px;
+  outline: none;
+  background: rgba(255,255,255,.76);
+  color: #5e666c;
+  font: 14px/1 var(--site-font);
+  box-shadow: inset 0 1px 3px rgba(201, 229, 251, .34);
+}
+.dm-input-wrap input::placeholder { color: #b7bec4; }
+.dm-input-wrap input:focus { border-color: #b9d6ec; box-shadow: 0 0 0 3px rgba(201, 229, 251, .46), inset 0 1px 3px rgba(201, 229, 251, .30); }
+.dm-input-wrap input:disabled { opacity: .7; }
+.dm-composer button {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0 0 2px;
+  border: 0;
+  border-radius: 50%;
+  background: #e6f4ff;
+  color: #8db9d8;
+  font-family: var(--site-font) !important;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 5px 13px rgba(220,240,255,.72);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+.dm-composer button:disabled { opacity: .34; box-shadow: none; }
+.dm-composer button:not(:disabled):active { transform: scale(.93); }
+
+@media (max-width: 380px) {
+  .dm-messages { padding-left: 11px; padding-right: 11px; }
+  .dm-avatar { flex-basis: 34px; width: 34px; height: 34px; }
+  .dm-bubbles { max-width: 82%; }
+  .dm-bubble { min-height: 32px; padding: 7px 16px 7px 18px; font-family: var(--site-font) !important; font-size: 12.5px; line-height: 18px; }
+  .dm-typing-avatar { width: 34px; height: 34px; }
+  .dm-row-right .dm-bubble { padding: 7px 16px 7px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-button.follow-missing, .dm-row, .dm-bubble, .dm-presence-wrap, .dm-typing i { animation: none; opacity: 1; transform: none; }
+  .dm-messages { scroll-behavior: auto; }
+}
+/* ===== Rain v4: Canvas 渲染（单 canvas，零 backdrop-filter） ===== */
+.page3-rain-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 700ms ease;
+  width: 100%;
+  height: 100%;
+}
+.page3-rain-canvas.is-on { opacity: 1; }
+
+/* 水波涇漪：雨开启时点击屏幕，涟漪画在雨的上层 */
+.page3-ripple-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.page3-ripple-canvas.is-on { opacity: 1; }
+
+/* 跟手涂鸦：WINGS 翻开后在最上层画，不拦截任何指针事件 */
+.page3-doodle-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 62;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 520ms ease;
+}
+.page3-doodle-canvas.is-on { opacity: 1; }
+
+
+
+
+/* 涟漪 */
+.p3-ripple {
+  position: fixed;
+  z-index: 61;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.1px solid rgba(255,255,255,.62);
+  box-shadow: 0 0 5px rgba(255,255,255,.38), inset 0 0 3px rgba(255,255,255,.26);
+  transform: scale(.18);
+  animation: p3-ripple-out var(--rip-dur, .9s) cubic-bezier(.16,.8,.3,1) forwards;
+  
+}
+.p3-ripple.is-second {
+  border-width: .75px;
+  border-color: rgba(214,236,252,.48);
+  box-shadow: 0 0 6px rgba(199,228,250,.30);
+}
+.p3-ripple.is-third {
+  border-width: .5px;
+  border-color: rgba(214,236,252,.32);
+  box-shadow: none;
+}
+@keyframes p3-ripple-out {
+  0%   { opacity: var(--rip-op, .62); transform: scale(.18); }
+  52%  { opacity: calc(var(--rip-op, .62) * .38); }
+  100% { opacity: 0; transform: scale(var(--rip-sc, 6)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  
+  .p3-ripple { animation-duration: 600ms !important; }
+  .ph-inner { transition: none; }
+}
+
+/* ===== EYES 卡背面：换成图片 ===== */
+.ph-back-eye {
+  border: 0;
+  background: #0b0b0d;
+  padding: 0;
+}
+.ph-back-eye::after { content: none; }
+.ph-back-eye img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+}
+
+/* ===== 摄像头权限交互（黑红 → 蓝白） ===== */
+.perm-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: 26px 16px;
+}
+.perm-layer[hidden] { display: none; }
+.perm-shade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 30%, rgba(2, 1, 2, .74), rgba(0, 0, 0, .92));
+  -webkit-backdrop-filter: blur(2.5px) saturate(108%);
+  backdrop-filter: blur(2.5px) saturate(108%);
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.perm-layer.is-shown .perm-shade { opacity: 1; }
+/* 权限卡字体与站点统一（perm-layer 位于 main 之外，需单独指定） */
+.perm-layer,
+.perm-layer :where(p, span, strong, em, button, div) {
+  font-family: var(--site-font) !important;
+  font-synthesis: none;
+}
+.perm-app { font-weight: 400 !important; }
+.perm-plea-card { font-weight: 400 !important; }
+.perm-toast-line { font-weight: 400 !important; }
+.perm-btn { font-weight: 400 !important; }
+
+/* —— 黑红卡 —— */
+.perm-card {
+  position: relative;
+  width: min(100%, 300px);
+  padding: 30px 20px 22px;
+  border-radius: 26px;
+  text-align: center;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(160deg, #0a0405 0%, #060203 52%, #030102 100%);
+  box-shadow:
+    0 0 0 .5px rgba(255, 84, 90, .20),
+    0 0 38px rgba(150, 8, 20, .22),
+    0 20px 46px -22px rgba(0, 0, 0, .90),
+    inset 0 1px 0 rgba(255, 255, 255, .05),
+    inset 0 0 60px rgba(120, 6, 16, .10);
+  opacity: 0;
+  transform: translateY(14px) scale(.97);
+  transition: opacity 420ms ease, transform 460ms cubic-bezier(.22, .61, .36, 1);
+}
+.perm-layer.is-shown .perm-card { opacity: 1; transform: none; }
+.perm-card > * { position: relative; z-index: 3; }
+.perm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 30% -10%, rgba(190, 20, 34, .13), rgba(190, 20, 34, 0) 62%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 3px);
+}
+.perm-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: .5px;
+  background: conic-gradient(from 200deg,
+    rgba(230, 40, 52, .70), rgba(230, 40, 52, .10),
+    rgba(200, 20, 34, .56), rgba(230, 40, 52, .09),
+    rgba(230, 40, 52, .70));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: .62;
+}
+.perm-card.is-out {
+  opacity: 0;
+  transform: translateY(-10px) scale(.98);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.perm-app {
+  margin: 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: normal;
+  text-wrap: balance;
+}
+.perm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 22px;
+  transition: opacity 240ms ease;
+}
+.perm-btn {
+  padding: 12px 14px;
+  border: .5px solid rgba(220, 70, 76, .22);
+  border-radius: 12px;
+  background: linear-gradient(158deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .01));
+  color: rgba(255, 255, 255, .82);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-indent: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 220ms ease, background 260ms ease, border-color 260ms ease;
+}
+.perm-btn:active { transform: scale(.975); }
+.perm-btn-primary {
+  border-color: rgba(200, 30, 44, .46);
+  background: linear-gradient(158deg, #8e0f1c 0%, #6a0813 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px -16px rgba(160, 12, 26, .9), inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+.perm-btn-deny { color: rgba(255, 255, 255, .46); border-color: rgba(255, 255, 255, .10); }
+
+/* —— 蓝白结果卡 —— */
+.perm-toast {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 26px 16px;
+  pointer-events: none;
+}
+.perm-toast[hidden] { display: none; }
+.perm-toast-line {
+  margin: 0;
+  width: min(100%, 268px);
+  padding: 26px 20px;
+  border-radius: 24px;
+  border: .5px solid rgba(255, 255, 255, .92);
+  background: linear-gradient(158deg, rgba(246, 251, 255, .95), rgba(227, 240, 253, .93) 62%, rgba(216, 234, 250, .93));
+  box-shadow:
+    0 0 40px rgba(150, 170, 200, .30),
+    0 16px 34px -18px rgba(108, 130, 164, .38),
+    inset 0 1px 0 rgba(255, 255, 255, .85);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  color: #14315f;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: normal;
+  text-align: center;
+  text-wrap: balance;
+  opacity: 0;
+  transform: translateY(10px) scale(.98);
+  transition: opacity 460ms ease, transform 520ms cubic-bezier(.22, .61, .36, 1);
+}
+.perm-toast.is-shown .perm-toast-line { opacity: 1; transform: none; }
+.perm-toast.is-out .perm-toast-line {
+  opacity: 0;
+  transform: translateY(-8px) scale(1.01);
+  transition: opacity 760ms ease, transform 760ms ease;
+}
+
+/* —— 「不行吗...?」独立卡 —— */
+.perm-plea-layer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 26px 16px;
+  pointer-events: none;
+}
+.perm-plea-layer[hidden] { display: none; }
+.perm-plea-card {
+  margin: 0;
+  width: min(100%, 240px);
+  padding: 26px 18px;
+  border-radius: 24px;
+  text-align: center;
+  color: #ff7a80;
+  font-size: 16px;
+  line-height: 1.7;
+  letter-spacing: normal;
+  text-shadow: 0 0 16px rgba(255, 70, 78, .50);
+  background: linear-gradient(160deg, #0a0405 0%, #060203 52%, #030102 100%);
+  box-shadow:
+    0 0 0 .5px rgba(255, 84, 90, .18),
+    0 0 34px rgba(150, 8, 20, .20),
+    0 18px 40px -22px rgba(0, 0, 0, .90),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+  opacity: 0;
+  transform: none;
+  transition: none;
+}
+/* 硬闪现：直接切可见，不做慢入 */
+.perm-plea-layer.is-shown .perm-plea-card { opacity: 1; }
+.perm-plea-layer.is-flicker .perm-plea-card { opacity: 0; }
+.perm-plea-layer.is-out .perm-plea-card { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .perm-card, .perm-toast-line, .perm-plea-card { transition: none; }
+}
+
+/* —— 故障层：硬边切片 + 硬色块 + 扫描线 —— */
+.perm-glitch-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  pointer-events: none;
+  overflow: hidden;
+  display: none;
+}
+.perm-glitch-layer.is-on { display: block; }
+.perm-glitch-band {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  
+}
+.perm-glitch-band > * { pointer-events: none; }
+.perm-glitch-shards {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.perm-glitch-shards > * {
+  pointer-events: none;
+  
+}
+.perm-glitch-bar {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  display: block;
+  
+}
+.perm-glitch-scan { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .perm-glitch-layer { display: none !important; }
+}
+
+/* 卡面文字：与整站字体/字重保持完全一致（置于全局规则之后，避免被覆盖） */
+.site-body .page3-highlight .ph-label { font-family: var(--site-font) !important; font-weight: 700 !important; font-size: 10px !important; font-synthesis: none; }
+.site-body .page3-highlight .ph-back b { font-family: var(--site-font) !important; font-weight: 700 !important; font-size: 10px !important; font-synthesis: none; }
+.site-body .page3-highlight .ph-back i { font-family: var(--site-font) !important; font-weight: 400 !important; font-size: 8.5px !important; font-synthesis: none; }
+.site-body .page3-highlight .ph-kao { font-family: var(--site-font) !important; font-weight: 400 !important; }
+@media (max-width: 374px) {
+  .site-body .page3-highlight .ph-label { font-size: 9px !important; }
+  .site-body .page3-highlight .ph-back b { font-size: 9px !important; }
+  .site-body .page3-highlight .ph-back i { font-size: 7.5px !important; }
+}
+
+/* —— 卡面文字度量统一：与网页正文同一套（整数字号 / 字距 normal / 不合成） —— */
+.perm-layer .perm-app,
+.perm-layer .perm-btn,
+.perm-layer .perm-plea-card,
+.perm-layer .perm-toast-line {
+  font-family: var(--site-font) !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  font-synthesis: none;
+}
+.perm-layer .perm-app { font-size: 15px !important; }
+.perm-layer .perm-btn { font-size: 13px !important; }
+.perm-layer .perm-plea-card { font-size: 16px !important; }
+.perm-layer .perm-toast-line { font-size: 16px !important; }
+
+.site-body .page3-highlight .ph-label,
+.site-body .page3-highlight .ph-back b,
+.site-body .page3-highlight .ph-back i,
+.site-body .page3-highlight .ph-kao {
+  font-family: var(--site-font) !important;
+  letter-spacing: normal !important;
+  font-synthesis: none;
+}
+.site-body .page3-highlight .ph-label { font-size: 10px !important; font-weight: 700 !important; }
+.site-body .page3-highlight .ph-back b { font-size: 10px !important; font-weight: 700 !important; }
+.site-body .page3-highlight .ph-back i { font-size: 9px !important; font-weight: 400 !important; }
+.site-body .page3-highlight .ph-kao { font-size: 9px !important; font-weight: 400 !important; }
+
+/* ===== LILY 卡背面：手写花体字标（矢量），纯蓝单色 ===== */
+.ph-back-lily {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: #fbfdff;
+}
+.ph-back-lily::after { content: none; }
+.ph-back-lily img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 52%;
+  padding: 0;
+  box-sizing: border-box;
+}
+/* ===== LILY 翻开时的页面一闪回：轻微模糊 + 胶片噪点 + 均匀淡蓝紫 ===== */
+.welcome-view.is-dreamcore {
+  position: relative;
+  isolation: isolate;
+  filter: saturate(1.2) brightness(1.07) contrast(1.01) blur(.5px);
+}
+/* 蓝紫底 + 内部曝光 + 柔光：遮罩层自己带模糊，边缘无硬切线，光从画面里渗出来 */
+.welcome-view.is-dreamcore::after {
+  content: "";
+  position: absolute;
+  inset: -8%;
+  z-index: 60;
+  pointer-events: none;
+  background-image:
+    radial-gradient(120% 66% at 50% 4%, rgba(255, 255, 255, .78), rgba(255, 255, 255, .12) 68%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(100% 50% at 50% 100%, rgba(255, 255, 255, .30), rgba(255, 255, 255, 0) 80%),
+    radial-gradient(78% 46% at 50% 42%, rgba(150, 138, 255, .60), rgba(150, 138, 255, 0) 78%),
+    linear-gradient(180deg, rgb(206, 200, 255), rgb(200, 196, 255));
+  background-blend-mode: screen, screen, soft-light, normal;
+  mix-blend-mode: multiply;
+  opacity: .66;
+  filter: blur(14px);
+}
+/* 胶片噪点：颗粒压得住 blur，整页像隔了层旧玻璃 */
+.welcome-view.is-dreamcore::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 61;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.46' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+  mix-blend-mode: overlay;
+  opacity: .48;
+}
+/* 移轴：上下模糊、中间一条带子保清晰；模糊量靠蒙版渐变过渡，不会出现硬边 */
+.dream-tilt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* vh 先兵底（旧 WebView），dvh 跟随地址栏/键盘变化后的真实可视高 */
+  height: 100vh;
+  height: 100dvh;
+  z-index: 59;
+  pointer-events: none;
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition: opacity .5s ease;
+}
+.welcome-view.is-dreamcore .dream-tilt {
+  opacity: 1;
+  /* 模糊量跟屏高走：矮屏轻一点，大屏重一点，但夹在 3~7px 不失控 */
+  -webkit-backdrop-filter: blur(clamp(3.5px, calc(2px + 0.48vh), 8px)) saturate(1.06);
+  backdrop-filter: blur(clamp(3.5px, calc(2px + 0.48vh), 8px)) saturate(1.06);
+  /* 蒙版尺寸锁到一屏高：清晰横带落在屏幕正中，而不是按整页高度算 */
+  -webkit-mask-image: linear-gradient(180deg,
+    #000 0%, #000 12%, rgba(0,0,0,.5) 25%, rgba(0,0,0,0) 38%,
+    rgba(0,0,0,0) 62%, rgba(0,0,0,.5) 75%, #000 88%, #000 100%);
+  mask-image: linear-gradient(180deg,
+    #000 0%, #000 12%, rgba(0,0,0,.5) 25%, rgba(0,0,0,0) 38%,
+    rgba(0,0,0,0) 62%, rgba(0,0,0,.5) 75%, #000 88%, #000 100%);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
+}
+/* 闪回时页面一从 display:none 复活，入场动画会从头重播——全部压掉，直接看到完整版面 */
+.welcome-view.is-dreamcore,
+.welcome-view.is-dreamcore * {
+  transition: none !important;
+}
+.welcome-view.is-dreamcore:not(.is-scattering),
+.welcome-view.is-dreamcore:not(.is-scattering) * {
+  animation: none !important;
+}
+.welcome-view.is-dreamcore:not(.is-scattering) .profile-hero,
+.welcome-view.is-dreamcore:not(.is-scattering) .profile-actions,
+.welcome-view.is-dreamcore:not(.is-scattering) .profile-content,
+.welcome-view.is-dreamcore:not(.is-scattering) .profile-content > *,
+.welcome-view.is-dreamcore:not(.is-scattering) .profile-post,
+.welcome-view.is-dreamcore:not(.is-scattering) .post-heading,
+.welcome-view.is-dreamcore:not(.is-scattering) .section-rule {
+  opacity: 1 !important;
+  transform: none !important;
+}
+/* 闪回退场：第一页固定盖在上方整体雾化散开，页面三在下面从雾里显影 */
+/* 散场期间把两组"每帧重算"的滤镜关掉，只留面罩与透明度：
+   ① .dream-tilt 的 backdrop-filter ② 容器自身的 blur/saturate */
+.welcome-view.is-dreamcore.is-scattering {
+  filter: none !important;
+}
+.welcome-view.is-dreamcore.is-scattering .dream-tilt {
+  opacity: 0 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.welcome-view.is-dreamcore.is-scattering {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  animation: dreamcoreScatter .66s cubic-bezier(.36, .02, .62, 1) forwards !important;
+  
+}
+/* 只动 opacity / transform：逐帧改 filter 会让整层每帧重新栅格化，
+   安卓 WebView 上直接掉帧。雾感交给下面那层静态模糊的 ::after 面罩。 */
+@keyframes dreamcoreScatter {
+  0%   { opacity: 1; transform: scale(1); }
+  30%  { opacity: .96; transform: scale(1.014); }
+  65%  { opacity: .52; transform: scale(1.032); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+/* 白雾向外膨胀，把整页吞掉 */
+.welcome-view.is-dreamcore.is-scattering::before {
+  animation: scatterNoise .5s ease-out forwards !important;
+}
+@keyframes scatterNoise {
+  0%   { opacity: .15; }
+  100% { opacity: 0; }
+}
+.welcome-view.is-dreamcore.is-scattering::after {
+  animation: scatterVeil .66s ease-out forwards !important;
+}
+@keyframes scatterVeil {
+  0%   { opacity: .66; }
+  60%  { opacity: .34; }
+  100% { opacity: 0; }
+}
+/* 分层飘散：头图最先化开，正文紧随，制造纵深散开感 */
+.welcome-view.is-dreamcore.is-scattering .profile-hero {
+  animation: scatterLayerA .62s cubic-bezier(.4, 0, .68, 1) forwards !important;
+}
+.welcome-view.is-dreamcore.is-scattering .profile-actions {
+  animation: scatterLayerB .66s cubic-bezier(.4, 0, .68, 1) forwards !important;
+}
+.welcome-view.is-dreamcore.is-scattering .profile-content {
+  animation: scatterLayerB .68s cubic-bezier(.4, 0, .68, 1) forwards !important;
+}
+@keyframes scatterLayerA {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  60%  { opacity: .45; transform: translateY(-18px) scale(1.03); }
+  100% { opacity: 0; transform: translateY(-34px) scale(1.06); }
+}
+@keyframes scatterLayerB {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  60%  { opacity: .5; transform: translateY(-9px) scale(1.02); }
+  100% { opacity: 0; transform: translateY(-18px) scale(1.04); }
+}
+/* 页面三：从雾里慢慢显影，不做淡入回弹 */
+.page3-view.is-returning {
+  animation: page3Emerge .72s cubic-bezier(.36, .02, .62, 1) both !important;
+  will-change: opacity, transform;
+}
+/* 页面三显影：只用 opacity + 极小位移（能走合成层，不重排不重栅格化）。
+   原来这里对整页跑 blur(7px)→0，手机上每帧都要重新模糊一整屏，很卡。 */
+@keyframes page3Emerge {
+  0%   { opacity: .42; transform: translateY(6px) scale(.995); }
+  55%  { opacity: .95; transform: translateY(1.5px) scale(1); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-view.is-dreamcore::before { opacity: .15; }
+  .welcome-view.is-dreamcore.is-scattering { animation: none !important; }
+  .page3-view.is-returning { animation: none !important; }
+}
+/* ---- P4 末行：可点击的颜文字切换 ---- */
+button.page4-link-row {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button.page4-link-row:active .page4-symbol {
+  opacity: .55;
+}
+button.page4-link-row:focus-visible {
+  outline: 2px solid rgba(27,44,193,.32);
+  outline-offset: 4px;
+}
+.page4-symbol-row .page4-symbol {
+  transition: opacity 150ms ease;
+}
+/* [fix 2026-10-22] 触屏点击 button 后 :hover / :focus-visible 会黏住，整行 opacity 落到 .66，
+   连着左边那颗方形缩略图一起变浅。这一行点击时保持完全不变。 */
+button.page4-link-row:hover,
+button.page4-link-row:focus-visible,
+button.page4-link-row:active {
+  opacity: 1;
+  outline: none;
+}
+.page4-symbol.is-swapping {
+  animation: p4SymbolSwap 280ms cubic-bezier(.22,.61,.36,1);
+}
+@keyframes p4SymbolSwap {
+  0%   { opacity: 0; transform: translateY(5px) scale(.9); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* 长串（如「終末無害化」那行）需要小一号才不会溢出 */
+.page4-symbol.is-wide {
+  font-size: 11.5px;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+@media (max-width: 390px) {
+  .page4-symbol.is-wide { font-size: 10.5px; letter-spacing: .02em; }
+}
+
+
+/* ================= P2 竖形票根层叠展示（镂空齿边版 TICKET_V4） ================= */
+#page2.letter-page.p2-stacked-mode {
+  --p2-mask-v: url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20244%20500'%20preserveAspectRatio='none'><path%20fill='white'%20fill-rule='evenodd'%20d='M0%200H244V500H0Z%20M0.55%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M11.64%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M22.73%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M33.82%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M44.91%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M56%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M67.09%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M78.18%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M89.27%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M100.36%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M111.45%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M122.55%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M133.64%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M144.73%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M155.82%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M166.91%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M178%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M189.09%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M200.18%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M211.27%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M222.36%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M233.45%200a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M0.55%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M11.64%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M22.73%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M33.82%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M44.91%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M56%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M67.09%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M78.18%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M89.27%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M100.36%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M111.45%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M122.55%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M133.64%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M144.73%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M155.82%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M166.91%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M178%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M189.09%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M200.18%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M211.27%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M222.36%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M233.45%20500a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-8.5%20306a8.5%208.5%200%201%200%2017%200a8.5%208.5%200%201%200%20-17%200Z%20M235.5%20306a8.5%208.5%200%201%200%2017%200a8.5%208.5%200%201%200%20-17%200Z'/></svg>");
+  --p2-mask-h: url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20340%20178'%20preserveAspectRatio='none'><path%20fill='white'%20fill-rule='evenodd'%20d='M0%200H340V178H0Z%20M-5%205.56a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2016.69a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2027.81a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2038.94a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2050.06a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2061.19a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2072.31a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2083.44a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%2094.56a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20105.69a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20116.81a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20127.94a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20139.06a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20150.19a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20161.31a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-5%20172.44a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%205.56a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2016.69a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2027.81a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2038.94a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2050.06a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2061.19a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2072.31a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2083.44a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%2094.56a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20105.69a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20116.81a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20127.94a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20139.06a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20150.19a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20161.31a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M335%20172.44a5%205%200%201%200%2010%200a5%205%200%201%200%20-10%200Z%20M-11%2089a11%2011%200%201%200%2022%200a11%2011%200%201%200%20-22%200Z%20M329%2089a11%2011%200%201%200%2022%200a11%2011%200%201%200%20-22%200Z'/></svg>");
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  /* [fix 2026-10-22] 页面二总高对齐其他内部页（p3 实测 907px），不再多出一大截 */
+  min-height: max(calc(100svh - 54px), 907px);
+  margin: 0 auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  /* [10/22 V19] 底色整体翻白：去掉深海底图，改白纸到浅蓝的过渡 */
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 40%, #f2f9ff 74%, #e7f3ff 100%);
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% 100%;
+  color: #1c2a3a;
+}
+/* [fix 2026-10-22] 只在页面二真正可见时才铺 flex，否则 ID 选择器优先级会压过 .page-view{display:none}，把整站串成一条 */
+#page2.letter-page.p2-stacked-mode.is-visible {
+  display: flex;
+  flex-direction: column;
+}
+#page2.p2-stacked-mode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* [10/22 V19] 原来的黑色压角改成一层极淡的浅蓝雾气 */
+  background:
+    radial-gradient(ellipse 96% 70% at 50% 34%, rgba(255, 255, 255, 0) 0%, rgba(236, 247, 255, 0.28) 74%, rgba(223, 239, 255, 0.46) 100%);
+  pointer-events: none;
+}
+/* 底部由实色背景接住图片，不再出现截断与空裂 */
+#page2.p2-stacked-mode .letter-backdrop { display: none !important; }
+#page2.p2-stacked-mode .letter-content[hidden] { display: none !important; }
+
+/* ===== [ticket23] 页面二 · 横版纪念票根（纸质票根 + 齿孔撕线 + 撕下才退出） =====
+   设计参考：米白票根纸（地名 / 拼音 / 日期 / 引文） + 照片票面 + 黄色手写字。
+   性能：全程只用 transform / opacity 动画，不用 blur、不用 drop-shadow、不用 backdrop-filter。 */
+.p2-postcard-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 26px 14px;
+  overflow: hidden;
+  /* 容器本身永远在场、永远是「已绘制」状态：
+     入场时只改 dim / 票根的 opacity 和 transform，不再临时建图层，
+     这是之前那一下顿感的真正来源。 */
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+  perspective: 1100px;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+}
+/* 压暗层：单独一层，透明度从 0 起，动画只碰 opacity */
+.pt-dim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(118% 86% at 50% 42%, rgba(6, 14, 28, .62) 0%, rgba(4, 9, 20, .9) 100%);
+  opacity: 0;
+  transition: opacity 320ms ease;
+  will-change: opacity;
+  pointer-events: none;
+}
+.p2-postcard-reveal.is-revealed {
+  pointer-events: auto;
+}
+.p2-postcard-reveal.is-revealed .pt-dim {
+  opacity: 1;
+}
+/* 撕掉票根之后的退场 */
+.p2-postcard-reveal.is-torn {
+  pointer-events: none;
+}
+.p2-postcard-reveal.is-torn .pt-dim {
+  opacity: 0 !important;
+}
+/* 退场淡出由 pt-tear.js 逐帧写内联 !important 驱动，这里不开 CSS 过渡：
+   两者同时改 opacity 会互相覆写，安卓 WebView 跳过过渡时就变成"瞬间消失+空等"。 */
+.p2-postcard-reveal.is-torn .pt-ticket,
+.p2-postcard-reveal.is-torn .pt-caption {
+  opacity: 0 !important;   /* 最终态兼兵：必须胜过 .is-revealed 的 opacity:1 */
+}
+.pt-stage {
+  position: relative;
+  /* v34：不再开 preserve-3d。票面/票根都是平面，3D 子层只让
+     clip-path 边缘在安卓 WebView 上走低质量栅格化（看着就是锯齿），
+     也没必要多养一个合成层。 */
+  transform-style: flat;
+}
+
+/* ---------- 票根主体（几何由 pt-tear.js 用 clip-path 切出） ---------- */
+.pt-ticket {
+  --tt-w: 720px;
+  --tt-h: 360px;
+  --tt-stub: 288px;
+  position: relative;
+  width: min(93vw, 720px);
+  aspect-ratio: 2 / 1;
+  max-height: 62vh;
+  transform-origin: 50% 88%;
+  transform: translate3d(0, 28px, 0) rotateX(15deg) scale(.955) rotate(-.8deg);
+  /* 票纸必须是不透明白纸：入场只走位移，不做 opacity 淡入。
+     安卓 WebView 里带 clip-path 的子树一旦跑 alpha 过渡，被打断就停在中间值，
+     整张票变半透明、底下暖色背景透上来 —— 看上去就是“纸发黄 / 做旧”。
+     所以隐藏改用 visibility，alpha 恒为 1。 */
+  opacity: 1;
+  visibility: hidden;
+  transition: transform 760ms cubic-bezier(.16, .86, .28, 1);
+  will-change: transform;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.p2-postcard-reveal.is-revealed .pt-ticket {
+  visibility: visible;
+  transform: translate3d(0, 0, 0) rotateX(0deg) scale(1) rotate(-.8deg);
+  opacity: 1;
+}
+
+.pt-plane,
+.pt-shift,
+.pt-body,
+.pt-stub {
+  position: absolute;
+  inset: 0;
+}
+.pt-plane { transform-style: flat; }
+.pt-shift {
+  /* 这里原本是两层 drop-shadow。带 clip-path 的子树在安卓 WebView 上过滤镜后
+     整块会被渲染成半透明图层（票根“透明”、背景透上来就是这个）。
+     现在票面要纯白实心，就不要滤镜了，立体感交给轮廓线。 */
+  filter: none;
+}
+/* will-change: transform 不在空闲时加。
+   clip-path 边缘在 GPU 合成层上不走反锯齿 —— 上沿直线就会变锯齿。
+   撕动时由 JS 临时加上，结束后再去掉。 */
+.pt-body,
+.pt-stub { will-change: auto; }
+
+/* 票面纸（左侧照片）—— 以前这里没给 position/size，两个纸层是 static + 高度0，
+   等于“根本没有纸”，只飘着文字与轮廓线，所以看起来整张票是透明的。
+   现在纸层是实打实 absolute 铺满，宽度由 JS 用 --pt-body-w 给出（齿孔位置）。 */
+.pt-body-paper {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--pt-body-w, 60%);
+  /* 形状（右侧齿孔 + 圆角）由 JS 写入 path()，坐标系与元素 1:1 */
+  background: #ffffff;   /* 纯白，不要米黄做旧底 */
+  border-radius: 3px 0 0 3px;
+}
+/* 票根纸（右侧，可撕） */
+.pt-stub-paper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  /* JS 未跑之前的兜底：只露右侧，避免整张白纸盖住照片 */
+  -webkit-clip-path: inset(0 0 0 var(--pt-body-w, 60%));
+  clip-path: inset(0 0 0 var(--pt-body-w, 60%));
+  background-color: #ffffff;   /* 实心白纸：不叠任何渐变，保证不透背景 */
+  background-image: none;
+  border-radius: 0 3px 3px 0;
+}
+
+.pt-photo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;   /* 垫底也是白：图片未解码时不冒出深色块 */
+}
+.pt-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.015);
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.pt-photo::after {
+  content: none;   /* 不再给照片压暗上色，原图什么色调就什么色调 */
+}
+/* .pt-ink 已随 HTML 一起移除（图上不再有任何手写文字） */
+.pt-photo-stamp {
+  position: absolute;
+  left: 9px;
+  top: 9px;
+  z-index: 2;
+  padding: 5px 4px;
+  border: 1px solid rgba(255, 255, 255, .58);
+  border-radius: 2px;
+  color: rgba(255, 255, 255, .82);
+  font: 600 6.4px/1.4 var(--site-font);
+  letter-spacing: .12em;
+  text-align: center;
+  transform: rotate(-6deg);
+  pointer-events: none;
+}
+
+/* ---------- 票根正面（右侧，可拖 / 可点） ---------- */
+.pt-stub-face {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(100% - var(--tt-stub, 40%));
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
+  padding: 15px 18px 13px 15px;
+  border: 0;
+  background: transparent;
+  color: #2d3b32;
+  font-family: var(--site-font);
+  text-align: left;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.pt-ticket[data-grabbing] .pt-stub-face { cursor: grabbing; }
+
+.pt-stub-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.pt-stub-place {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: #2b3a31;
+  white-space: nowrap;
+}
+.pt-stub-date {
+  font-family: var(--site-font);
+  font-size: 8px;
+  letter-spacing: .04em;
+  color: #7f8c7f;
+  white-space: nowrap;
+}
+.pt-stub-roman {
+  margin-top: 3px;
+  font-family: var(--site-font);
+  font-size: 6.6px;
+  letter-spacing: .2em;
+  color: #9aa597;
+  text-transform: uppercase;
+}
+/* 票根上的站名标签行：字与站内导航完全同源（水母心髒 / 恨海情天 / 之死靡他） */
+.pt-stub-tags {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--site-font);
+  font-size: 6.6px;
+  letter-spacing: .13em;
+  color: #6d93bb;
+  white-space: nowrap;
+}
+.pt-stub-rule {
+  width: 24px;
+  height: 1px;
+  margin: 9px 0 auto;
+  background: rgba(96, 130, 168, .38);
+}
+.pt-stub-title {
+  display: block;
+  font-size: 10.5px;
+  line-height: 1.35;
+  letter-spacing: .06em;
+  color: #35453a;
+}
+.pt-stub-quote {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--site-font);
+  font-size: 8.4px;
+  line-height: 1.72;
+  letter-spacing: .01em;
+  color: #3f6589;
+}
+.pt-stub-hint {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--site-font);
+  font-size: 7px;
+  letter-spacing: .3em;
+  color: #a9b2a4;
+}
+
+/* ---------- 轮廓线 / 纸纤维 ---------- */
+.pt-outline,
+.pt-fibres {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+/* 票的形状（齿孔、圆角）已经由纸层 clip-path 本身给出，
+   不再需要一条描边线。撕票时那圈 .9px 细黑边就是从这里来的，直接关掉。 */
+.pt-outline { display: none; }
+/* 纤维线（撕票时齿孔之间的连线）关掉 */
+.pt-fibres { display: none; }
+
+/* 票下的影（v34）：垫在整张票下面的一圈很淡的影，均匀、不断裂。
+   之前是两段 radial-gradient 分别铺在票面/票根下方，两段在撕线处接不上，
+   加上峰值 .46 太黑，看起来就是“断裂 + 贴纸浮空”。
+   现在是一个与整票同尺寸的圆角矩形，只靠 box-shadow 向外渗一圈：
+   中间被白纸完全盖住，只在纸外缘留 8~10px 的过渡暗边。 */
+.pt-cast {
+  transition: clip-path 110ms ease-out;
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: var(--pt-radius, 5px);
+  background: transparent;
+  pointer-events: none;
+  /* 外扩负值：让阴影能活到元素盒子外面。撕开时才把右半切掉。 */
+  clip-path: inset(-40px -40px -40px -40px);
+  box-shadow:
+    0 4px 14px -3px rgba(2, 6, 14, .40),
+    0 1px 3px rgba(2, 6, 14, .22);
+}
+/* 撕开开始：整张票的影只保留票面那半；票根那半交给 .pt-cast-stub 跟着票根走。
+   未撕时仍是一整片，接缝处不会出现断层。 */
+.pt-ticket[data-peeling] .pt-cast {
+  clip-path: inset(-40px calc(100% - var(--pt-body-w, 60%)) -40px -40px);
+}
+/* 票根自己的影：贴在 .pt-stub 里，随票根位移/旋转/淡出，原位置不留残影。
+   左边缘贴在撕线上，不往照片上渗。 */
+.pt-cast-stub {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--pt-body-w, 60%);
+  right: 0;
+  z-index: 0;
+  border-radius: 0 var(--pt-radius, 5px) var(--pt-radius, 5px) 0;
+  background: transparent;
+  pointer-events: none;
+  clip-path: inset(-40px -40px -40px 0);
+  box-shadow:
+    0 4px 14px -3px rgba(2, 6, 14, .40),
+    0 1px 3px rgba(2, 6, 14, .22);
+  opacity: 0;
+  transition: opacity 110ms ease-out;
+}
+.pt-ticket[data-peeling] .pt-cast-stub { opacity: 1; }
+/* 纸层自身只留一线极轻的内阴影，撕线孔旁不再出现暗带 */
+.pt-body-paper,
+.pt-stub-paper {
+  box-shadow: inset 0 -1px 0 rgba(10, 18, 30, .045);
+}
+.pt-fibres path {
+  fill: none;
+  stroke: rgba(122, 110, 88, .55);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+/* ---------- 卡下小字 ---------- */
+.pt-caption {
+  margin: 8px 0 0;
+  color: rgba(233, 243, 255, .66);
+  font: 10.5px/1.5 var(--site-font);
+  letter-spacing: .1em;
+  text-align: center;
+  opacity: 1;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: transform 560ms cubic-bezier(.16, .86, .28, 1) 240ms, visibility 0s linear 240ms;
+}
+.p2-postcard-reveal.is-revealed .pt-caption {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- 小屏 ---------- */
+@media (max-width: 400px) {
+  .pt-ticket { width: 94vw; }
+  .pt-stub-face { padding: 12px 13px 11px 12px; }
+  .pt-stub-place { font-size: 13.5px; }
+  .pt-stub-title { font-size: 9.6px; }
+  .pt-stub-quote { font-family: var(--site-font); font-size: 7.9px; line-height: 1.68; }
+}
+@media (max-height: 560px) {
+  .pt-ticket { max-height: 58vh; }
+  .pt-caption { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .p2-postcard-reveal,
+  .pt-ticket,
+  .pt-caption { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+
+/* ===== P2 深海 ASCII 水母背景（JELLY_V1 · 2026-10-22） =====
+   画布高度由 jelly-deep.js 按 .page2-blue-extension 上沿写入，
+   只覆盖深色区；下方浅蓝区块完全不动。 */
+#page2 .p2-jelly-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  /* [fix-v49a] 原来是 height:65%，和 canvas 按 offsetTop 算出来的像素高对不齐，
+     底下会留一条约 7px 的白缝，拖动时特别显眼。现在由 jelly-deep.js 把精确
+     像素高写进 --p2-jelly-h，两边永远相等；JS 未就绪时回退 65%。 */
+  height: var(--p2-jelly-h, 65%);
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  /* [fix-v49a] 去掉 contain:paint——它会给本层建独立合成层，
+     和水母 canvas 叠加后在安卓 WebView 上容易出白闪 */
+}
+#page2 .p2-jelly-layer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* [fix-v49a] 兜底色：与 drawBase 渐变顶部同色，帧掉了一瞬间也不会闪白 */
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 34%, #f3f9ff 68%, #eaf5ff 88%, #e2f0ff 100%);
+}
+
+
+.p2-viewport {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* [fix 2026-10-22] 交给内容自然撑高，剩余空间由底部延伸填充 */
+  min-height: 0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  /* [nav 2026-10-22] 顶栏改成固定玻璃条后不再占文档流，这里补回它遮住的高度。
+     [fix-v49a] 改用 --p2-topbar-h（script.js 实测）：顶栏高度会随安全区变化，
+     写死 60px 会让票根的居中基准偏上几 px。 */
+  padding: var(--p2-topbar-h, calc(env(safe-area-inset-top) + 60px)) 18px 24px;
+}
+
+/* ---- 页面二顶部导航栏（白色半透明玻璃 · 头像 + 天使用户0516） ----
+   [nav 2026-10-22] 原来是文档流里的一个 header，现在提到视口顶部做成一行固定导航。
+   注意：外面 #page2 有 overflow:hidden，sticky 在它里面不走滚动，所以只能用 fixed。
+   z-index 18 要低于音乐球(20)和底部导航栏(20)，右上角让出位置不打架。 */
+.p2-topbar {
+  position: fixed;
+  /* [v49c] 镜像模糊层要贴着圆角/边缘裁切，不能让模糊的柔边溢出 */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 18;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top) + 7px) 64px 7px 18px;
+  /* [fix-v49a] 这里原来用了 backdrop-filter: blur(16px)。
+     底下就是一直在动的 ASCII 水母 canvas，安卓 WebView 拖动时每一帧都要把背后
+     重新糊一遍，扛不住 → 上下拖动就闪白。跟本项目 10/22 关闭其他毛玻璃是同一个原因。
+     玻璃感改用「半透明白 + 顶部高光 + 内阴影 + 细描边」的静态做法，不动背后像素。 */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.62) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(196, 220, 244, 0.28),
+    0 4px 18px rgba(52, 98, 160, 0.09);
+  transition: background 220ms ease, box-shadow 220ms ease;
+}
+/* [fix-v49a] 已不再用 backdrop-filter，这条兜底保留也无害；
+   仍在超老内核上给一层更实的白，避免 0.62 太透看不清字。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .p2-topbar { background: rgba(255, 255, 255, 0.88); }
+}
+/* 贴顶时玻璃更薄更透，稍微下滚后加深一点，看得出这是一层浮着的面 */
+#page2.is-nav-scrolled .p2-topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.78) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(196, 220, 244, 0.34),
+    0 8px 22px rgba(52, 98, 160, 0.13);
+}
+/* [v49c] 水母穿过导航栏时的虚化：镜像画布。
+   jelly-deep.js 每帧把“此刻被导航栏盖住的那一段”拷贝到这块 canvas 上，
+   然后用纯 CSS filter: blur() 模糊它 → 水母在栏内变成一团模糊的蓝。
+   和 backdrop-filter 的关键区别：这里模糊的是一张已经画好的小图（390×53），
+   不是每帧回读背后整个活动画布，安卓 WebView 跑得动，不会重现卡顿闪白。 */
+.p2-topbar-frost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  /* 放大一点，避开 blur 后四周露出的透明柔边 */
+  transform: scale(1.12);
+  transform-origin: center;
+  filter: blur(7px) saturate(118%);
+  opacity: .92;
+}
+.p2-topbar > *:not(.p2-topbar-frost) {
+  position: relative;
+  z-index: 1;
+}
+/* 有镜像模糊层时，栏本身的底色调得更透，让模糊的水母透出来 */
+#page2 .p2-topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.40) 100%);
+  overflow: hidden;
+}
+#page2.is-nav-scrolled .p2-topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.66) 0%, rgba(255, 255, 255, 0.54) 100%);
+}
+/* ===== [v49d] 滚动期降载：治上下滑动残留的白闪 =====
+   安卓 WebView 滚动时，凡是「带 filter 的元素」和「每帧变化的 canvas」
+   都要在每次滚动帧重新栅格化；主线程一忙不过来就先给你一块空白。
+   做法：滚动一开始给 #page2 挂 is-scrolling，把最贵的几样临时关掉，
+   停手 160ms 后自动恢复——静止画面和现在完全一样。 */
+/* 票根的 drop-shadow 是这时最大的开销（翻页卡顿时我们就砍过它）。
+   滚动期间保留一组轻量阴影，降低重绘成本但不让票根失去层次；停手后恢复完整阴影。 */
+#page2.is-scrolling .p2-card,
+#page2.is-scrolling .p2-card.is-front,
+#page2.is-scrolling .p2-card.is-next,
+#page2.is-scrolling .p2-card.is-prev,
+#page2.is-scrolling .p2-flat-ticket {
+  filter: drop-shadow(0 3px 8px rgba(52, 96, 152, 0.14)) !important;
+  transition-property: transform, opacity;
+}
+/* 【v49e 核心】滚动期间卸掉票根的镂空遮罩。
+   三张卡各带一张 232x470 的 mask-image（齿边镂空），面积共约 32 万 px²。
+   安卓 WebView 每次滚动重光栅化都要把这三张遮罩重算一遍，
+   算不过来就先给你整页一片白 —— 这就是那个「整页闪白」。
+   滚动中把它改成直角：手在划、视线在动，根本看不出齿边没了；
+   停手 160ms 后恢复镂空。 */
+#page2.is-scrolling .p2-card-inner {
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+/* 顶栏那块模糊镜像：filter: blur() 每帧都要重新模糊一次，滚动时最贵。
+   滚动中隠掉——手在划的时候本来就是一片流动的虚影，看不出来少东西；
+   停手 160ms 后恢复，静止时依旧能看到模糊水母。 */
+#page2.is-scrolling .p2-topbar-frost {
+  opacity: 0 !important;
+}
+/* 顶栏固定层：强制独立合成层，滚动时只做纹理平移，不再逐帧重绘 */
+#page2 .p2-topbar {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+.p2-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  user-select: none;
+}
+.p2-profile-avatar {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 10px rgba(52, 98, 160, 0.2);
+  background: #dceafb;
+}
+.p2-profile-title {
+  display: block;
+  /* [nav] flex 子项默认会被压缩，小屏下标题会被切成一截，这里禁止收缩 */
+  flex: 0 0 auto;
+  max-width: 100%;
+  color: #17283a;
+  font: 600 14.5px/1.25 "Avenir Next", "PingFang SC", sans-serif;
+  letter-spacing: .03em;
+  white-space: nowrap;
+  text-shadow: none;
+}
+
+/* ---- 票根展台 ---- */
+.p2-ticket-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* [fix-v49a] 上下 padding 必须相等：deck 在 stage 内居中，若上下不等，票根会整体偏 4px。 */
+  padding: 18px 0;
+  touch-action: pan-y;
+  /* [fix-v49a] 让展台高度吃满「顶栏以下、底部导航以上」这段真实可视区，
+     再由 justify-content:center 把票根堆垂直居中 → 页面不滑动时上下左右都居中。
+     --p2-stage-h 由 script.js 实测写入；JS 未就绪时不影响原布局。 */
+  min-height: var(--p2-stage-h, 0px);
+  box-sizing: border-box;
+}
+.p2-ticket-deck {
+  position: relative;
+  width: 232px;
+  height: 470px;
+  perspective: 1200px;
+  margin: 0 auto;
+  user-select: none;
+  touch-action: pan-y;
+  transition: opacity .26s ease;
+}
+.p2-ticket-deck.is-veiled {
+  /* [10/22 r2] 不再整体降透明度——那会让背后的竖版票根也变半透明。
+     现在只锁交互，压暗交给上面的 .p2-deck-veil。 */
+  pointer-events: none;
+}
+
+/* 翻页/拖动瞬间：阴影半径砍小，drop-shadow 是安卓 WebView 翻页卡顿的大头。 */
+.p2-ticket-deck.is-moving .p2-card,
+.p2-ticket-deck.is-moving .p2-card.is-front,
+.p2-ticket-deck.is-moving .p2-card.is-next,
+.p2-ticket-deck.is-moving .p2-card.is-prev {
+  filter: drop-shadow(0 3px 6px rgba(52, 96, 152, 0.16));
+  transition-property: transform, opacity;
+}
+
+/* ---- 票根单卡（真实镂空齿边） ---- */
+.p2-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 232px;
+  height: 470px;
+  box-sizing: border-box;
+  background: transparent;
+  color: #1f2329;
+  overflow: visible;
+  filter: drop-shadow(0 14px 24px rgba(52, 96, 152, 0.24));
+  /* [10/23 v50] 翻页起手那一帧的 66ms 长帧：三张卡各带一张 232x470 的齿边 mask，
+     动画一启动 Chromium 就要把遮罩重新栅格化一次。will-change 让这三层提前
+     提为合成层，遮罩结果缓存成纹理，动画只做纹理变换 —— 视觉零变化，长帧归零。
+     实测：翻页 longs 1 (65.9ms) -> 0，max 33.0，avg 18.9->17.4。 */
+  will-change: transform, opacity;
+  transition:
+    transform .3s cubic-bezier(.22, 1, .36, 1),
+    opacity .3s cubic-bezier(.22, 1, .36, 1),
+    filter .3s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  
+  outline: none;
+}
+.p2-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  -webkit-mask-image: var(--p2-mask-v);
+  mask-image: var(--p2-mask-v);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  /* [10/23 v51] 内层再单独提为合成层：滚动起手那一帧 is-scrolling 要卸掉三张 mask，
+     整页滚动时这层纹理跟着自己走，不再随父层重算。实测滚动起手 49.5ms -> 0。
+     齿边仍由 mask 画，视觉完全不变。 */
+  transform: translateZ(0);
+}
+
+/* 堆叠姿态（抽卡时零层级突变） */
+.p2-card.is-front {
+  /* 当前最上层略放大；翻到后排后由 is-next/is-prev 自动恢复原尺寸 */
+  transform: translate3d(0, 0, 0) scale(1.06) rotate(0deg);
+  z-index: 4;
+  opacity: 1;
+  pointer-events: auto;
+  filter: drop-shadow(0 20px 30px rgba(46, 90, 148, 0.30));
+}
+.p2-card.is-next {
+  transform: translate3d(30px, 9px, 0) scale(0.92) rotate(3.6deg);
+  z-index: 2;
+  opacity: .9;
+  pointer-events: auto;
+  filter: drop-shadow(0 12px 20px rgba(52, 96, 152, 0.20));
+}
+.p2-card.is-prev {
+  transform: translate3d(-30px, 14px, 0) scale(0.865) rotate(-3.4deg);
+  z-index: 1;
+  opacity: .74;
+  pointer-events: auto;
+  filter: drop-shadow(0 8px 16px rgba(52, 96, 152, 0.16));
+}
+.p2-card.is-leaving-left {
+  transform: translate3d(-134px, -26px, 0) scale(0.9) rotate(-15deg);
+  z-index: 6;
+  opacity: .08;
+  pointer-events: none;
+  transition: transform .36s cubic-bezier(.4, 0, .2, 1), opacity .34s ease, filter .3s ease;
+}
+.p2-card.is-leaving-right {
+  transform: translate3d(134px, -26px, 0) scale(0.9) rotate(15deg);
+  z-index: 6;
+  opacity: .08;
+  pointer-events: none;
+  transition: transform .36s cubic-bezier(.4, 0, .2, 1), opacity .34s ease, filter .3s ease;
+}
+
+/* 上半部：照片展示区 */
+.p2-card-frame {
+  position: relative;
+  width: 100%;
+  height: 268px;
+  flex: 0 0 268px;
+  box-sizing: border-box;
+  padding: 12px 12px 0;
+  overflow: hidden;
+}
+.p2-card-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #081a42;
+}
+/* 中部：虚线剪切线（正对左右镂空缺口） */
+.p2-card-divider {
+  flex: 0 0 auto;
+  margin: 14px 16px 12px;
+  border-top: 1.5px dashed rgba(35, 42, 54, 0.26);
+}
+/* 下半部：票据信息 */
+.p2-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 18px 16px;
+  box-sizing: border-box;
+  min-height: 0;
+}
+.p2-card-title {
+  margin: 0;
+  color: #1e242d;
+  font: 700 17px/1.3 "Avenir Next", "PingFang SC", sans-serif;
+  letter-spacing: .02em;
+}
+.p2-card-sub {
+  margin: 3px 0 9px;
+  color: #7b8593;
+  font: 10.5px/1.35 "Songti SC", "Noto Serif CJK SC", serif;
+  letter-spacing: .08em;
+}
+.p2-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 0 9px;
+  color: #4b5462;
+  font: 10px/1.45 "Avenir Next", sans-serif;
+  letter-spacing: .06em;
+}
+.p2-card-meta em {
+  font-style: normal;
+  color: #9aa4b1;
+  font-size: 8.5px;
+  letter-spacing: .12em;
+  margin-right: 5px;
+}
+.p2-card-quote {
+  margin: 0;
+  color: #647080;
+  font: italic 10.5px/1.5 Georgia, serif;
+  letter-spacing: .01em;
+}
+.p2-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.p2-card-admit {
+  color: #2b3340;
+  font: 700 9px/1 "Avenir Next", sans-serif;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.p2-card-code {
+  color: #9aa4b1;
+  font: 10px/1 "Avenir Next", sans-serif;
+  letter-spacing: .1em;
+}
+
+/* ---- 票根01：您好幸識（身份卡版式，参考票根票面排版） ---- */
+/* 克莱因蓝 #002FA7 作为本卡主色：✝、副行、樱花都用它 */
+.p2-title-cross {
+  color: #002FA7;
+  font-weight: 400;
+  font-size: 1em;
+  line-height: 1;
+  margin-right: 4px;
+  display: inline-block;
+  vertical-align: baseline;
+}
+.p2-card.is-ident .p2-card-title {
+  font-size: 17px;
+  letter-spacing: .04em;
+}
+.p2-card.is-ident .p2-card-sub {
+  margin: 4px 0 10px;
+  color: #002FA7;
+  font-size: 10px;
+  letter-spacing: .1em;
+}
+.p2-sakura {
+  width: 10px;
+  height: 10px;
+  margin-right: 3px;
+  color: #002FA7;
+  vertical-align: -1px;
+}
+.p2-meta-id {
+  gap: 4px;
+  margin: 0 0 10px;
+  /* 同一张票根内的中英文统一走全站字体，不再混用 Avenir/PingFang 造成两套字形 */
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  color: #3f4854;
+}
+.p2-meta-id .p2-meta-item {
+  display: block;
+  padding-bottom: 3px;
+  border-bottom: 1px dotted rgba(35, 42, 54, 0.14);
+  word-break: break-word;
+}
+.p2-meta-id .p2-meta-item:last-child { border-bottom: none; }
+.p2-meta-id em {
+  display: inline-block;
+  min-width: 40px;
+  font-size: 7.5px;
+  letter-spacing: .14em;
+  color: #9aa4b1;
+}
+.p2-card.is-ident .p2-card-quote {
+  /* 引文改为英文，字体回到票根同一套全站字体族，不再混入日文衬线 */
+  font-family: var(--site-font) !important;
+  /* 强制单行：不换行、不溢出，靠字号压进票面宽度 */
+  white-space: nowrap;
+  font-size: 7.6px;
+  line-height: 1.9;
+  color: #5f6b7a;
+  font-style: normal;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.p2-card.is-ident .p2-card-footer { padding-top: 6px; }
+
+/* ================= 长条横版票根（点击展开） ================= */
+.p2-deck-veil {
+  /* [10/22 r3] 提到 body 层、盖满整个视口：之前只罩住票根展台那一块，
+     四周还是亮的，看着像贴了个黑框。现在整页一起压。 */
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  background: rgba(20, 44, 78, 0.36);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.p2-deck-veil.is-shown { opacity: 1; pointer-events: auto; }
+
+.p2-flat-ticket {
+  /* 跟着遮罩一起搬到 body 层，fixed 定位：挣脱页面里那些 transform 造出来的
+     堆叠上下文，才能稳稳站在暗罩之上。 */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 97;
+  width: min(88vw, 336px);
+  height: 172px;
+  transform: translate(-50%, -50%) scale(.9);
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 24px 40px rgba(0, 4, 20, 0.62)) drop-shadow(0 0 22px rgba(214, 236, 255, 0.16));
+  transition: transform .36s cubic-bezier(.22, 1, .36, 1), opacity .26s ease;
+  
+}
+.p2-flat-ticket.is-shown {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.p2-flat-ticket .p2-card-inner {
+  flex-direction: row;
+  border-radius: 12px;
+  -webkit-mask-image: var(--p2-mask-h);
+  mask-image: var(--p2-mask-h);
+}
+.p2-flat-ticket .p2-card-frame {
+  width: 44%;
+  height: 100%;
+  flex: 0 0 44%;
+  padding: 12px 0 12px 12px;
+}
+.p2-flat-ticket .p2-card-cover {
+  height: 100%;
+  border-radius: 6px;
+}
+.p2-flat-ticket .p2-card-divider {
+  display: none;
+}
+.p2-flat-ticket .p2-card-body {
+  flex: 1;
+  padding: 16px 18px 14px 16px;
+  border-left: 1.5px dashed rgba(35, 42, 54, 0.26);
+  min-width: 0;
+}
+.p2-flat-ticket .p2-card-title { font-size: 15px; }
+.p2-flat-ticket .p2-card-sub { margin: 2px 0 7px; font-size: 9.5px; }
+.p2-flat-ticket .p2-card-meta { margin-bottom: 7px; font-size: 9px; }
+.p2-flat-ticket .p2-card-quote {
+  font-size: 9.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.p2-flat-ticket .p2-card-footer { padding-top: 6px; }
+
+@media (max-width: 360px) {
+  .p2-profile-avatar { width: 36px; height: 36px; flex: 0 0 36px; }
+  .p2-ticket-deck, .p2-card { width: 224px; height: 456px; }
+  .p2-card-frame { height: 258px; flex: 0 0 258px; }
+  .p2-card.is-next { transform: translate3d(26px, 8px, 0) scale(0.92) rotate(3.4deg); }
+  .p2-card.is-prev { transform: translate3d(-26px, 12px, 0) scale(0.865) rotate(-3.4deg); }
+  .p2-card.is-leaving-left { transform: translate3d(-126px, -24px, 0) scale(0.9) rotate(-15deg); }
+  .p2-card.is-leaving-right { transform: translate3d(126px, -24px, 0) scale(0.9) rotate(15deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p2-card, .p2-flat-ticket { transition-duration: .01ms !important; }
+}
+
+/* ================= 克莱尔修：减负（10/22） =================
+   毛玻璃 backdrop-filter 底下是一直在下的雨和在动的动画，每一帧都要把背后重新糊一遍，安卓 WebView 最扛不住。
+   这里关掉常驻的几处，换成半透明纯色，看着还是玻璃。放在文件最后，靠先后顺序生效，没加 !important，
+   以后想在某个 class 上恢复毛玻璃，直接在这块后面写就行。
+   留着没动的：「梦核」那一下整页雾化（1 秒左右）、票根展开时的遮罩 .p2-deck-veil（底下是静止的，不费电）。 */
+.music-bar, .ask-card, .ask-btn, .dm-header, .dm-presence, .dm-composer,
+.perm-shade, .perm-toast-line {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.music-bar { background: rgba(255, 255, 255, .94); }
+.ask-card { background: linear-gradient(158deg, rgba(255, 255, 255, .86), rgba(250, 252, 255, .74)); }
+.ask-btn { background-color: rgba(255, 255, 255, .12); }
+.dm-header { background: rgba(255, 255, 255, .88); }
+.dm-presence { background: linear-gradient(158deg, rgba(255,255,255,.9), rgba(236,242,248,.84)); }
+.dm-composer { background: rgba(255, 255, 255, .92); }
+/* 克莱尔修：切到后台时 CSS 动画全部暂停（不改成只播一次，回来接着动） */
+body.is-hidden-tab *, body.is-hidden-tab *::before, body.is-hidden-tab *::after {
+  animation-play-state: paused !important;
+}
+
+/* [perf 2026-10-22] 非当前页整体暂停动画，配合 script.js 里的 page-paused 类。
+   原来的写法按内联 style 找元素，页面里没有这样的元素，等于没生效。 */
+.page-paused, .page-paused *, .page-paused *::before, .page-paused *::after {
+  animation-play-state: paused !important;
+}
+/* ================= 票根 02：我存在於（两竖一并排 · 方形在下） ================= */
+/* 上图区高度和票根01的照片区一致，虚线剪切线也落在同一位置，两张票的骨架对齐 */
+.p2-collage {
+  position: relative;
+  flex: 0 0 268px;
+  height: 268px;
+}
+.p2-shot {
+  position: absolute;
+  display: block;
+  height: auto;
+  box-sizing: border-box;
+  padding: 3px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(38, 70, 118, .16);
+  -webkit-tap-highlight-color: transparent;
+}
+/* 两张竖图并排：左 92 / 右 108，顶部对齐 */
+.p2-shot-a { left: 10px; top: 10px; width: 40%; }
+.p2-shot-c { right: 10px; top: 10px; width: 46%; }
+/* 方图居中放在下面 */
+.p2-shot-b { left: 50%; top: 164px; width: 100px; transform: translateX(-50%); }
+/* 正文：字号、行距、间距全部对齐票根01 */
+.p2-body-exist { padding: 0 18px 16px; }
+.p2-card.is-exist .p2-card-title { font-size: 17px; letter-spacing: .04em; }
+.p2-card.is-exist .p2-card-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin: 4px 0 10px;
+  color: #7b8593;
+  font-size: 10px;
+  line-height: 1.35;
+  letter-spacing: .1em;
+}
+.p2-sub-dim { color: #7b8593; letter-spacing: .18em; }
+.p2-sub-blue { color: #002FA7; letter-spacing: .06em; }
+.p2-sub-note { color: #9aa4b1; letter-spacing: .12em; }
+.p2-card.is-exist .p2-card-quote {
+  /* 和票根01完全同一套：全站字体、7.6px、强制单行 */
+  font-family: var(--site-font) !important;
+  white-space: nowrap;
+  margin: auto 0 0;
+  font-size: 7.6px;
+  line-height: 1.9;
+  color: #5f6b7a;
+  font-style: normal;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: clip;
+}
+/* 横版票根：只留第一张当左侧图位，其余版式沿用原来的横版 */
+.p2-flat-ticket .p2-collage { flex: 0 0 42%; width: 42%; height: 100%; }
+.p2-flat-ticket .p2-shot-a {
+  left: 50%;
+  top: 50%;
+  width: 74px;
+  transform: translate(-50%, -50%);
+}
+.p2-flat-ticket .p2-shot-b,
+.p2-flat-ticket .p2-shot-c { display: none; }
+.p2-flat-ticket .p2-body-exist .p2-card-quote {
+  margin-top: auto;
+  white-space: normal;
+  font-size: 8.5px;
+  line-height: 1.45;
+  text-overflow: clip;
+}
+.p2-card.is-exist .p2-card-footer { margin-top: 0; padding-top: 8px; }
+
+/* ===== [t2 终版] 票根02 我存在於：去掉虚线剪切线 · 图片整体放大 · 文字行距对齐票根01 ===== */
+/* 原先的 268px 是照票根01照片区算的，现在中间那条虚线（14+1.5+12≈27.5px）拿掉了，
+   把这段高度还给图片区，票根正文的起始位置仍然和票根01 差不多齐。 */
+.p2-collage {
+  flex: 0 0 300px;
+  height: 300px;
+}
+/* 两张竖图：贴到票面两侧（留 6px），等高并排，中间隔 6px */
+.p2-shot-a { left: 6px;  top: 6px; width: 99px;  }
+.p2-shot-c { right: 6px; top: 6px; width: 115px; }
+/* 方图：居中放在下方，比原来大一圈，上下留白对称 */
+.p2-shot-b { left: 50%; top: 168px; width: 118px; transform: translateX(-50%); }
+/* 正文：行距/边距逐项照抄票根01 */
+.p2-body-exist { padding: 0 18px 16px; }
+.p2-card.is-exist .p2-card-sub {
+  margin: 4px 0 10px;
+  line-height: 1.35;
+}
+.p2-card.is-exist .p2-card-quote {
+  margin: 0;
+  line-height: 1.9;
+}
+.p2-card.is-exist .p2-card-footer { padding-top: 6px; }
+
+/* --- 修正：引文自动顶到票根脚上（跟票根01 一样，引文与票根脚都在下沿），票根脚不要提前跑上来 --- */
+.p2-card.is-exist .p2-card-quote { margin: auto 0 0; }
+.p2-card.is-exist .p2-card-footer { margin-top: 0; padding-top: 6px; }
+/* 方图再大一点，下沿留白收一收 */
+.p2-shot-b { top: 166px; width: 122px; }
+
+/* ===== [t2 v3] 图文重排：图放大占满上半 · 正文贴到底 · 空白处贴水母小涂鸦 ===== */
+.p2-collage {
+  flex: 0 0 360px;
+  height: 360px;
+}
+/* 两张竖图等高并排，贴到两侧 */
+.p2-shot-a { left: 6px;  top: 6px; width: 99px;  }
+.p2-shot-c { right: 6px; top: 6px; width: 115px; }
+/* 方图：靠左边对齐，右边留一条竖栏给涂鸦 */
+.p2-shot-b { left: 6px; top: 168px; width: 146px; transform: none; }
+/* 正文贴底：标题→副行→英文一路紧挨，不再在中间拉开一大片空 */
+.p2-card.is-exist .p2-card-quote { margin: 0; }
+.p2-card.is-exist .p2-card-footer { margin-top: auto; padding-top: 6px; }
+/* ---- 水母小涂鸦（克莱因蓝墨点线，参考手稿卡的调子） ---- */
+.p2-jelly {
+  position: absolute;
+  left: 156px;
+  top: 178px;
+  width: 68px;
+  height: 140px;
+  opacity: .62;
+  pointer-events: none;
+}
+.p2-jelly-tag {
+  position: absolute;
+  left: 158px;
+  top: 168px;
+  color: #002FA7;
+  font: 500 5.4px/1 var(--site-font);
+  letter-spacing: .18em;
+  text-transform: none;
+  opacity: .55;
+  pointer-events: none;
+}
+.p2-caption {
+  position: absolute;
+  left: 8px;
+  top: 322px;
+  width: 145px;
+  color: #002FA7;
+  font: 5.4px/1.5 var(--site-font);
+  letter-spacing: .06em;
+  opacity: .5;
+  pointer-events: none;
+}
+/* 横版长条票根里不放涂鸦 */
+.p2-flat-ticket .p2-jelly,
+.p2-flat-ticket .p2-jelly-tag,
+.p2-flat-ticket .p2-caption { display: none; }
+
+/* ===== [t2 v4] 图片边距对齐票根01（内缩 12px）· 水母改用手绘抠图 ===== */
+.p2-collage { flex: 0 0 360px; height: 360px; }
+/* 票根01 的照片框 padding 是 12px，这里三张图也同样内缩 12px */
+.p2-shot-a { left: 12px;  top: 12px; width: 94px;  }
+.p2-shot-c { right: 12px; top: 12px; width: 108px; }
+.p2-shot-b { left: 12px; top: 170px; width: 120px; transform: none; }
+/* 水母抠图：竖着立在右栏，和方图并排 */
+.p2-jelly {
+  position: absolute;
+  left: 136px;
+  top: 158px;
+  width: 84px;
+  height: auto;
+  opacity: .95;
+  pointer-events: none;
+}
+.p2-jelly-tag {
+  left: auto;
+  right: 12px;
+  top: 291px;
+  letter-spacing: .18em;
+  text-align: right;
+  color: #7C9FF2;
+  transform: rotate(-6deg);
+  opacity: .6;
+}
+.p2-caption {
+  left: 12px;
+  top: 322px;
+  width: 118px;
+  opacity: .48;
+}
+
+/* ===== [t2 v5] 2026-10-23：水母提亮 · 蓝色英文补满空白 · 大图动效 · 关闭按钮美化 ===== */
+/* 补字表：SiteLove/SiteHeiti 子集里缺的字（母、檔、✝✿ 等）从同一字体家族补进来，
+   只放在 SiteLove 后面，已有字仍然用原来那份，不会改变已有排版。 */
+@font-face {
+  font-family: "SiteLoveExtra";
+  src: url("site-love-extra-v3.woff2?v=3") format("woff2"), url("site-love-extra-v3.woff?v=3") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+:root {
+  --site-font: "SiteLove", "SiteLoveExtra", "SiteHeiti", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+/* 水母本来压着 .95 透明度，提亮之后让它透出来 */
+.p2-jelly { opacity: 1; }
+/* 蓝色文案：四条错落的小句，像手写一样沿一条波线走过来，颜色从深到浅 */
+.p2-wave { position: absolute; inset: 0; pointer-events: none; }
+.p2-wave span {
+  position: absolute;
+  white-space: nowrap;
+  font: 5.4px/1.4 var(--site-font);
+  letter-spacing: .06em;
+}
+/* [v21] 每个字自己沿弧线走：字块由 script.js 逐个加 transform，
+   这里只给字形本身做支撑，不再用整行 rotate 假装弧度。 */
+.p2-wave span i {
+  display: inline-block;
+  font-style: normal;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.p2-wave .w-a { left: 12px; top: 302px; color: #002FA7; opacity: .78; }
+.p2-wave .w-b { left: 159px; top: 313px; color: #3B62D8; opacity: .70; }
+.p2-wave .w-c { left: 26px; top: 324px; color: #6E93E6; opacity: .80; }
+.p2-wave .w-d { left: 121px; top: 335px; color: #A6C2F2; opacity: .95; }
+.p2-flat-ticket .p2-wave { display: none; }
+/* ---- 大图预览：淡入 + 从 0.9 推到 1，关闭时倒放 ---- */
+.lightbox {
+  display: flex !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .26s ease, visibility 0s linear .26s;
+}
+.lightbox.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .32s ease, visibility 0s linear 0s;
+}
+.lightbox img {
+  opacity: 0;
+  transform: scale(.9) translateY(8px);
+  transition: opacity .3s ease, transform .44s cubic-bezier(.22, 1, .36, 1);
+  will-change: transform, opacity;
+}
+.lightbox.is-open img {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+/* ---- 关闭按钮：浅天蓝圆盘 + 克莱因蓝长叉 ---- */
+.lightbox-close {
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  background: linear-gradient(160deg, #eaf4ff 0%, #cbe4ff 46%, #aed6ff 100%);
+  color: #002FA7;
+  box-shadow: 0 6px 18px rgba(4, 22, 62, .42), inset 0 0 0 1px rgba(255, 255, 255, .5);
+  transition: transform .24s cubic-bezier(.22, 1, .36, 1), box-shadow .24s ease, background .24s ease;
+}
+.lightbox-close svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  fill: none;
+}
+.lightbox-close:focus,
+.lightbox-close:focus-visible,
+.lightbox-close:active {
+  border-color: rgba(255, 255, 255, .95);
+  background: linear-gradient(160deg, #f6faff 0%, #d9ecff 46%, #bfdfff 100%);
+  color: #002FA7;
+}
+.lightbox-close:active { transform: scale(.93); }
+@media (hover: hover) {
+  .lightbox-close:hover { transform: rotate(90deg); box-shadow: 0 8px 22px rgba(4, 22, 62, .5), inset 0 0 0 1px rgba(255, 255, 255, .6); }
+}
+
+/* ===== [note2 2026-10-23] 票根 03 · 請您註意 =====
+   版式整体对齐票根 01：17px 标题 / 10px 蓝色副行 / 9px 三行 meta（DECLINE·TIMING·NOTICE）
+   / 7.6px 单行英文引文 / 底部分隔线 + TERMS PASS + 樱花编号。
+   上半张是价格表原图，contain 居中、不裁切，点开看原图。 */
+/* ===== [note3 2026-10-23] 票根 03 · 請您註意（逐项照票根 01 的字号/行距/装饰） =====
+   17px 标题 + 1em ✝ / 10px 蓝色副行 / 9.5px 三行 meta（DECLINE·TIMING·NOTICE，
+   标签 em 8px + 40px 对齐槽，项间 1px 点线）/ 7.6px 单行英文引文 /
+   底部分隔线 + TERMS PASS + 樱花编号。上半张价格表原图 contain 居中不裁切。 */
+.p2-card.is-note .p2-note-frame {
+  height: auto;
+  flex: 0 0 auto;
+  padding: 10px 12px 0;
+  overflow: hidden;
+}
+.p2-card.is-note .p2-note-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #0a1a40;
+}
+.p2-card.is-note .p2-card-divider { margin: 9px 18px 8px; }
+.p2-card.is-note .p2-note-body { padding: 0 18px 16px; }
+.p2-card.is-note .p2-card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  /* [note11] 票根03 全卡改用全站字体，与网页其他文字同一套字形
+     [note14] 字距跟票根01/02 的标题对齐（.04em），三张票根的标题节奏一致 */
+  font-family: var(--site-font);
+  font-weight: 400;
+  font-size: 17px;
+  letter-spacing: .04em;
+}
+.p2-card.is-note .p2-title-cross {
+  color: #002FA7;
+  font-size: 1em;
+  line-height: 1;
+  margin-right: 0;
+}
+.p2-card.is-note .p2-card-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin: 4px 0 10px;
+  color: #002FA7;
+  font-size: 10px;
+  line-height: 1.35;
+  letter-spacing: .1em;
+}
+.p2-card.is-note .p2-sub-dim { color: #7b8593; letter-spacing: .18em; }
+.p2-card.is-note .p2-sub-blue { color: #002FA7; letter-spacing: .06em; }
+.p2-card.is-note .p2-meta-id {
+  gap: 4px;
+  margin: 0 0 10px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  color: #3f4854;
+}
+.p2-card.is-note .p2-meta-id .p2-meta-item {
+  display: block;
+  padding-bottom: 3px;
+  border-bottom: 1px dotted rgba(35, 42, 54, 0.14);
+  word-break: break-word;
+}
+.p2-card.is-note .p2-meta-id .p2-meta-item:last-child { border-bottom: none; }
+.p2-card.is-note .p2-meta-id em {
+  min-width: 40px;
+  font-size: 8px;
+  letter-spacing: .13em;
+  color: #9aa4b1;
+}
+.p2-card.is-note .p2-meta-id b { color: #002FA7; font-weight: 700; }
+.p2-card.is-note .p2-card-quote {
+  margin: auto 0 5px;
+  padding-top: 0;
+  font-family: var(--site-font) !important;
+  font-style: normal;
+  font-size: 8px;
+  line-height: 1.9;
+  color: #5f6b7a;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.p2-card.is-note .p2-card-footer { padding-top: 6px; }
+
+/* ===== [note11 2026-10-23] 三张票根收口 =====
+   ① 黑色英文引文：三张卡共用一条规则，8px / 行高1.9 / 全站字体 / 单行不换行，
+      不再各卡各写一份，字号不会再走岔；
+   ② 引文到下方分隔线的距离：三张卡都靠 margin-top:auto 把引文压到票根脚上，
+      统一留 5px（票根01 原来的实测值），footer 不再吃 auto。 */
+.p2-ticket-deck .p2-card .p2-card-quote {
+  font-family: var(--site-font) !important;
+  font-style: normal;
+  font-size: 8px;
+  line-height: 1.9;
+  color: #5f6b7a;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin: auto 0 5px;
+}
+.p2-ticket-deck .p2-card .p2-card-footer {
+  margin-top: 0;
+  padding-top: 6px;
+}
+
+/* 票根03 正文：七行，按定好的断句一行一段；不再有小标题、不再有浅虚线 */
+.p2-card.is-note .p2-rules {
+  margin: 9px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--site-font);
+  /* [note14] 字号/行高/字距与票根01 的 meta 文本完全对齐： 9.5px / 1.5 / .04em */
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  color: #3f4854;
+}
+.p2-card.is-note .p2-rules p {
+  margin: 0;
+  white-space: nowrap;
+}
+.p2-card.is-note .p2-blue { color: #002FA7; }
+
+/* ===== [note16 2026-10-23] 页面一 → 页面二转场 ===== */
+/* ① 蓝幕：从底部升起铺满，再向上退走——像检票口把票吞进去。程序动画不改任何布局尺寸。 */
+.p2-enter-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(100%);
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(90deg, rgba(0,47,167,.16) 0 1px, rgba(0,47,167,0) 1px 9px);
+}
+.p2-enter-veil::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: rgba(0,47,167,.42);
+}
+/* [note20] 升幕与揭幕拆成两段动画，中间由 JS 在「页面真的换完」的那一刻接上。
+   原来是一整段 780ms 动画里含着揭幕时间点，主线程一卡，揭幕就抢在换页前面，
+   于是白幕还没盖满，上半屏先露出第二页的暗红底。拆开之后，揭幕永远晚于换页。 */
+.p2-enter-veil.is-covering {
+  visibility: visible;
+  opacity: 1;
+  animation: p2-veil-in 218ms cubic-bezier(.5,0,.2,1) forwards;
+}
+@keyframes p2-veil-in {
+  0%   { opacity: 1; transform: translateY(100%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.p2-enter-veil.is-revealing {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+  animation: p2-veil-out 557ms cubic-bezier(.5,0,.2,1) forwards;
+}
+@keyframes p2-veil-out {
+  0%   { opacity: 1; transform: translateY(0); }
+  22%  { opacity: 1; transform: translateY(0); }  /* 退幕前的静止：对应原 28%→44% 的停顿 */
+  100% { opacity: 1; transform: translateY(-100%); }
+}
+
+/* ② 页内错峰：票根台在幕开始往上退的那一拍从下浮起。
+   [note19] 延迟改由 JS 在幕的时间轴上调度（见 playPage2Enter），这里不再挂 delay。
+   只用 translateY / opacity，不改高度，--p2-stage-h 的实测不会被带偏。 */
+@keyframes p2-stage-in { from { opacity: 0; transform: translateY(44px); }  to { opacity: 1; transform: none; } }
+
+#page2.is-p2-entering .p2-ticket-stage { animation: p2-stage-in 760ms cubic-bezier(.16,.84,.24,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .p2-enter-veil.is-covering,
+  .p2-enter-veil.is-revealing { animation: none; }
+  #page2.is-p2-entering .p2-ticket-stage { animation: none; }
+}
+
+/* ===== [ticket23-perf] 竖版票展开那一下的卡顿：把大面积 drop-shadow 换成静态椭圆投影 =====
+   .p2-flat-ticket 原来挂了两层 drop-shadow（24px/40px 与 22px 光晕），
+   scale 动画每一帧都要重算一次大范围模糊，安卓 WebView 必掉帧。
+   现在投影是一条径向渐变伪元素：不参与重算，动画里只剩 transform 与 opacity。 */
+.p2-flat-ticket {
+  filter: none;
+}
+.p2-flat-ticket::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: -7px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 6, 18, .7) 0%, rgba(0, 6, 18, .34) 55%, rgba(0, 6, 18, 0) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.page4-background-art:not(.is-live) .p4-flow-items li { display: none; }
+.page4-background-art:not(.is-live) .p4-flow-items li:first-child { display: block; height: 100%; }
+.page4-background-art:not(.is-live) .p4-flow-items li:first-child img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+/* 占位图：仅在 WebGL 不可用或尚未就绪时显示第一张图 */
+.page4-background-art .p4-flow-items { display: block; padding: 0; position: absolute; inset: 0; z-index: 1; transition: opacity .3s ease, visibility 0s linear 0s; }
+.page4-background-art .p4-flow-items li { display: none; }
+.page4-background-art .p4-flow-items li:first-child { display: block; height: 100%; }
+.page4-background-art .p4-flow-items li:first-child img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.page4-background-art.is-live .p4-flow-items { display: block; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s ease, visibility 0s linear .12s; }
+
+
+/* ==================================================================
+   [OPT1 2026-10-23] 双端适配 + 流畅度补丁
+   放在文件最后：同优先级下靠顺序覆盖，不改动上面任何既有规则。
+   ================================================================== */
+
+/* ---- 1. iOS 字体重排 / 表单自动缩放 ---- */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+/* iOS 下输入框字号 <16px 会在获得焦点时放大整页，这里只对 iOS 抬到 16px，视觉差异极小 */
+@supports (-webkit-touch-callout: none) {
+  .dm-input-wrap input { font-size: 16px; }
+}
+
+/* ---- 2. 触摸交互：去掉 300ms 点击延迟 / 双击缩放误触 ---- */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+/* 票根区：横向拖拽交给 JS，纵向仍然可以滚动页面 */
+.p2-ticket-deck,
+.p2-card,
+#p2PostcardTicket,
+.p2-postcard-reveal {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* 大图预览：允许双指缩放，不接管 */
+.lightbox img { touch-action: pinch-zoom; }
+
+/* ---- 3. 滚动容器：iOS 惯性滚动 ---- */
+.dm-messages,
+.p2-viewport {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---- 4. 合成层：只给真正逐帧变化的元素加 will-change，其余回归自动 ---- */
+.page-view.is-entering,
+.welcome-view.is-entering,
+.p2-enter-veil,
+.pt-ticket {
+  will-change: transform, opacity;
+}
+.page-view:not(.is-entering),
+.welcome-view:not(.is-entering) {
+  will-change: auto;
+}
+
+/* ---- 5. 不支持 svh 的旧安卓 WebView 兜底 ---- */
+@supports not (height: 1svh) {
+  body,
+  .profile-page,
+  .future-page,
+  #page3 .page3-view {
+    min-height: 100vh;
+  }
+}
+
+/* ---- 6. 首屏动效：入场靠合成层属性，避免布局抖动 ---- */
+.p1-loaded .profile-hero,
+.p1-loaded .profile-actions,
+.p1-loaded .profile-content h1,
+.p1-loaded .handle,
+.p1-loaded .bio,
+.p1-loaded .tag-row,
+.p1-loaded .meta-row,
+.p1-loaded .stats-row,
+.p1-loaded .profile-post {
+  backface-visibility: hidden;
+}
+
+/* ---- 7. 首屏图片：解码完成前不闪烁（配合 JS 里的 decode 预解码） ---- */
+.profile-background,
+.profile-avatar,
+.post-image {
+  background-color: #e7f0f6;
 }
