@@ -4989,3 +4989,70 @@ label {
 .dm-row-right .dm-bubble::before {
   filter: drop-shadow(0 0 2.5px rgba(137, 146, 155, .32)) drop-shadow(0 0 9px rgba(137, 146, 155, .20));
 }
+
+/* ===== [ios-bfg 2026-10-23] iOS 专属降压：backdrop-filter =====
+   实测（iPad / 流量，无代理）：?noback=1 关掉全部 backdrop-filter 后整体流畅，
+   而只关动画（?noanim=1）仍然偏卡 —— 说明瓶颈是 iOS 对每个 backdrop-filter
+   元素都要单独建合成层、每帧重新采样背后的内容，九处叠在一屏上就拖死了。
+   安卓 Chromium 走 GPU 路径一直很顺，所以下面全部包在 iOS 专属的 @supports 里，
+   安卓与其他平台完全不受影响，观感一点不动。
+
+   做法不是简单粗暴地「关掉」，而是分两类：
+   ① 大面积／压在持续动画上的（顶栏、音乐条、私信头尾、全屏遮罩）→ 关模糊，
+      把原本靠模糊遮住的半透明白底色提上来，肉眼依旧是磨砂板，只是不再有玻璃虚影；
+   ② 开屏那两张小卡（面积小、只在问候阶段出现）→ 保留玻璃感，只把半径和饱和度压低，
+      观感几乎一致，开销降到原来一半以下。 */
+@supports (-webkit-touch-callout: none) {
+  /* ① 关掉：大面积 / 压在活动画布上 / 全屏 */
+  .p2-topbar,
+  .music-bar,
+  .dm-header,
+  .dm-composer,
+  .dm-presence,
+  .perm-shade,
+  .perm-toast-line {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* ① 底色补偿：原本靠模糊兜住的半透明，这里改成更实一点的底，视觉仍是“磨砂” */
+  #page2 .p2-topbar {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.78) 100%);
+  }
+  #page2.is-nav-scrolled .p2-topbar {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.93) 0%, rgba(255, 255, 255, 0.86) 100%);
+  }
+  .music-bar {
+    background: rgba(255, 255, 255, 0.95);
+  }
+  .dm-header {
+    background: rgba(255, 255, 255, 0.91);
+  }
+  .dm-composer {
+    background: rgba(255, 255, 255, 0.94);
+  }
+  .dm-presence {
+    background: linear-gradient(158deg, rgba(255, 255, 255, 0.90), rgba(224, 239, 255, 0.66));
+  }
+  .perm-toast-line {
+    background: linear-gradient(158deg, rgba(246, 251, 255, 0.97), rgba(227, 240, 253, 0.96) 62%, rgba(216, 234, 250, 0.96));
+  }
+
+  /* ② 保留玻璃感，只压低半径与饱和度 */
+  .ask-card,
+  .ask-btn {
+    -webkit-backdrop-filter: blur(9px) saturate(118%) !important;
+    backdrop-filter: blur(9px) saturate(118%) !important;
+  }
+
+  /* 移轴：原本常驻在整屏上，其实只在闪回转场出现。
+     平时彻底关掉（零开销），真到转场那 1.7 秒再开，半径也从 8px 降到 5px */
+  .dream-tilt {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .welcome-view.is-dreamcore .dream-tilt {
+    -webkit-backdrop-filter: blur(5px) !important;
+    backdrop-filter: blur(5px) !important;
+  }
+}
