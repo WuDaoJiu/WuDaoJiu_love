@@ -487,10 +487,7 @@
       if (window.FlexCarousel) { cb(); return; }
       if (loading) return;
       loading = true;
-      var d = document.createElement('script');
-      d.src = 'page4-flow-data.js?v=20261023B3';
-      d.async = true;
-      d.onload = d.onerror = function () {
+      var mountCarousel = function () {
         var s = document.createElement('script');
         s.src = 'page4-carousel.js?v=20261023R18';
         s.async = true;
@@ -498,6 +495,14 @@
         s.onerror = function () { loading = false; };
         (document.body || document.head).appendChild(s);
       };
+      /* [opt2] 流数据可能已被 preloadFlowData 拉过，不重复下第二遍 700KB */
+      if (window.__P4_FLOW_DATA || document.querySelector('script[data-flow-data]')) { mountCarousel(); return; }
+      var d = document.createElement('script');
+      d.src = 'page4-flow-data.js?v=20261023B3';
+      d.async = true;
+      d.setAttribute('data-flow-data', '');
+      d.onload = mountCarousel;
+      d.onerror = mountCarousel;
       (document.body || document.head).appendChild(d);
     }
     function doMount() {
