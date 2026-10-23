@@ -148,7 +148,7 @@ const page3Posts = [
     key: 'virtual-love',
     copy: '我们拉勾头抵着头发小小的誓，于是时间有了柔软的刻度。',
     tag: '心髒鑰匙',
-    image: 'page3-card-1.jpg',
+    image: 'page3-card-1-sm.webp',
     alt: '虚恋动态图片',
     href: 'https://www.kdocs.cn/l/cd1UnT68kBpa',
     stats: ['3,102', '1,240', '3.5万']
@@ -158,7 +158,7 @@ const page3Posts = [
     key: 'sick-love',
     copy: '仅有你我二人的逃亡之旅，装作废人的共依存症。',
     tag: '拖累症',
-    image: 'page3-card-2.jpg',
+    image: 'page3-card-2-sm.webp',
     alt: '病恋动态图片',
     href: 'https://www.kdocs.cn/l/cmvJAHDy9vap',
     stats: ['2,846', '986', '2.8万']
@@ -167,7 +167,7 @@ const page3Posts = [
     key: 'dom-white-knight',
     copy: '你落的泪会有答案。别害怕、到我这来。',
     tag: '輕吻、指引與愛',
-    image: 'page3-card-3.jpg',
+    image: 'page3-card-3-sm.webp',
     alt: 'Dom/白骑士动态图片',
     href: 'https://www.kdocs.cn/l/cjNLuDIhMVdb',
     stats: ['4,173', '1,506', '4.2万']
@@ -176,7 +176,7 @@ const page3Posts = [
     key: 'sub-lower',
     copy: '除了你与明天我还能去往哪里。',
     tag: '輕咬、淚水與愛',
-    image: 'page3-card-4.jpg',
+    image: 'page3-card-4-sm.webp',
     alt: 'Sub/下位动态图片',
     href: 'https://www.kdocs.cn/l/cjUHbxuOjRaM',
     stats: ['1,927', '734', '2.1万']
@@ -197,9 +197,9 @@ function preloadPage3Images() {
   });
 }
 function preloadPage3Tiles() {
-  ['page3-tile-rain.jpg', 'page3-tile-wings.jpg', 'page3-tile-lily.jpg', 'page3-tile-eye.jpg', 'page3-tile-rain-back.jpg'].forEach(function (src) {
+  ['page3-tile-rain-sm.webp', 'page3-tile-wings-sm.webp', 'page3-tile-lily-sm.webp', 'page3-tile-eye-sm.webp', 'page3-tile-rain-back-sm.webp'].forEach(function (src) {
     var im = new Image();
-    im.decoding = 'sync';
+    im.decoding = 'async';
     im.src = src;
     if (typeof im.decode === 'function') im.decode().catch(function () {});
   });
@@ -2992,13 +2992,13 @@ document.addEventListener('visibilitychange', function () {
   }
   var P2 = ['page2-avatar.jpg', 'page2-ticket1.jpg?v=ident5', 't2-a.jpg?v=ident3',
             't2-b.jpg?v=ident3', 't2-c.jpg?v=ident3', 'jelly.png?v=j5'];
-  var P3 = ['page3-banner.jpg', 'page3-tile-rain.jpg', 'page3-tile-wings.jpg',
-            'page3-tile-lily.jpg', 'page3-tile-eye.jpg', 'page3-tile-rain-back.jpg',
-            'lily-back.svg?v=32', 'page3-tile-eye-back.webp'];
-  var P4 = ['page4-flow-0.jpg?v=1', 'page4-flow-1.jpg?v=4', 'page4-flow-2.jpg?v=4',
-            'page4-flow-3.jpg?v=4', 'page4-flow-4.jpg?v=4', 'page4-flow-5.jpg?v=4',
-            'page4-tile-1.jpg', 'page4-tile-2.jpg', 'page4-tile-3.jpg',
-            'page4-tile-4.jpg', 'page4-tile-5.jpg', 'page4-tile-6.jpg'];
+  var P3 = ['page3-banner-sm.webp', 'page3-tile-rain-sm.webp', 'page3-tile-wings-sm.webp',
+            'page3-tile-lily-sm.webp', 'page3-tile-eye-sm.webp', 'page3-tile-rain-back-sm.webp',
+            'lily-back.svg?v=32', 'page3-tile-eye-back-sm.webp'];
+  var P4 = ['page4-flow-0-sm.webp?v=1', 'page4-flow-1-sm.webp?v=4', 'page4-flow-2-sm.webp?v=4',
+            'page4-flow-3-sm.webp?v=4', 'page4-flow-4-sm.webp?v=4', 'page4-flow-5-sm.webp?v=4',
+            'page4-tile-1-sm.webp', 'page4-tile-2-sm.webp', 'page4-tile-3-sm.webp',
+            'page4-tile-4-sm.webp', 'page4-tile-5-sm.webp', 'page4-tile-6-sm.webp'];
   /* 开屏还在放的时候什么都不取，别和首屏抢带宽 */
   window.addEventListener('site:intro-done', function () { warm(P2, 600); });
   /* 用户一直停在开屏、或者没走完问答：6 秒后仍然预热第二页 */

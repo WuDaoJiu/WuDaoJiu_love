@@ -618,7 +618,7 @@ body.lightbox-open { overflow: hidden; }
   height: clamp(112px, 35vw, 178px);
   overflow: hidden;
   border-radius: 7px;
-  background: url("page3-banner.jpg") center 48% / 108% 108% no-repeat;
+  background: url("page3-banner-sm.webp") center 48% / 108% 108% no-repeat;
   box-shadow: 0 8px 22px rgba(119, 151, 180, .13);
 }
 .page3-profile-row { display: flex; align-items: center; gap: 14px; padding: 12px 2px 0; }
