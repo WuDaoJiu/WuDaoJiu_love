@@ -71,6 +71,7 @@
   }
 })();
 </script>
+  <link rel="prefetch" as="image" href="page4-poster-sm.webp?v=20261023">
 </head>
 <body class="p1-body site-body p1-loaded">
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -410,7 +411,7 @@
   <main class="page4-view page-view" id="page4" aria-label="之死靡他">
     <section class="page4-top p4-reveal-item" aria-label="音介与告白">
       <figure class="page4-card page4-video-card">
-        <video class="page4-video" controls="" preload="metadata" playsinline="" poster="page4-poster.jpg?v=20261015" aria-label="音介视频">
+        <video class="page4-video" controls="" preload="metadata" playsinline="" poster="page4-poster-sm.webp?v=20261023" aria-label="音介视频">
           <source src="page4-video.mp4?v=20261015" type="video/mp4">
           您的浏览器不支持视频播放。
         </video>
@@ -481,7 +482,7 @@
     <a href="#page2" data-page="page2" class="selected">水母心髒</a>
     <a href="#page3" data-page="page3">恨海情天</a>
     <a href="#page4" data-page="page4">之死靡他</a></nav>
-  <script src="script.js?v=20261023_IOS11"></script><script src="pt-tear.js?v=20261023_TEAR28"></script><script src="jelly-deep.js?v=20261023_JELLY_V49f"></script><div class="lightbox" role="dialog" aria-label="大图预览"><button type="button" class="lightbox-close" aria-label="关闭"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg></button><img alt=""></div>
+  <script src="script.js?v=20261023_IOS12"></script><script src="pt-tear.js?v=20261023_TEAR28"></script><script src="jelly-deep.js?v=20261023_JELLY_V49f"></script><div class="lightbox" role="dialog" aria-label="大图预览"><button type="button" class="lightbox-close" aria-label="关闭"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg></button><img alt=""></div>
   <!-- page4-carousel.js 改为按需懒加载 -->
   <script>
   /* 右上角「愛」卡片的流动轮播：改成懒加载——WebGL2 库只在第 4 页真正可见时才拉取，
@@ -497,7 +498,7 @@
       loading = true;
       var mountCarousel = function () {
         var s = document.createElement('script');
-        s.src = 'page4-carousel.js?v=20261023R18';
+        s.src = 'page4-carousel.js?v=20261023R19';
         s.async = true;
         s.onload = function () { loading = false; cb(); };
         s.onerror = function () { loading = false; };
@@ -506,7 +507,7 @@
       /* [opt2] 流数据可能已被 preloadFlowData 拉过，不重复下第二遍 700KB */
       if (window.__P4_FLOW_DATA || document.querySelector('script[data-flow-data]')) { mountCarousel(); return; }
       var d = document.createElement('script');
-      d.src = 'page4-flow-data.js?v=20261023B3';
+      d.src = 'page4-flow-data.js?v=20261023B4';
       d.async = true;
       d.setAttribute('data-flow-data', '');
       d.onload = mountCarousel;
@@ -542,7 +543,7 @@
       if (window.__P4_FLOW_DATA) return;
       if (document.querySelector('script[data-flow-data]')) return;
       var p = document.createElement('script');
-      p.src = 'page4-flow-data.js?v=20261023B3';
+      p.src = 'page4-flow-data.js?v=20261023B4';
       p.async = true;
       p.setAttribute('data-flow-data', '');
       (document.body || document.head).appendChild(p);

@@ -495,12 +495,66 @@ function resetToIntro(force) {
   if (!force && current && current.id === 'welcomePage') return;
   showPage('welcomePage', { resetScroll: false });
 }
-window.addEventListener('pageshow', () => {
-  resetToIntro(false);
+/* [iosfix2026-10-23d] 「弹回第一页」的真正原因就在这里。
+   原写法：任何 pageshow 都调 resetToIntro(false)。
+   但 resetToIntro 只会在「当前已经是 welcomePage」时提前返回，
+   换句话说：只要你已经站在第三/四页/私信页，一次 pageshow 就会被强行拉回首屏。
+   而 iOS 在内存吃紧时会先冻结页面、回前台或资源释放后再触发 pageshow
+   （persisted 为真或整页重载），于就是「图片刚加载好，自己弹回第一页」。
+   现在：bfcache 恢复保持原页；非恢复的首次加载交给下方 resetToIntro(true)。 */
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    /* 从冻结状态回来：保留用户当时所在的那一页 */
+    tryResumeAudio();
+    return;
+  }
   tryResumeAudio();
 });
 
-resetToIntro(true);
+/* [iosfix2026-10-23d] iOS 因内存压力直接丢弃并重载整页时，pageshow 不会带 persisted，
+   脚本会从头跑一遍、落到首屏——这是「弹回第一页」的另一半。
+   这里用 sessionStorage 记一个极短的窗口（10s）：只有重载发生得如此之快，
+   才说明不是用户主动刷新，而是系统回收；此时恢复到原来那一页。
+   用户真去刷新（通常远超过 10s），依旧按原设计从头开始。 */
+(function () {
+  var KEY = 'site:lastPage';
+  var restore = null;
+  /* 先看这次是怎么来的：只有「浏览器自己重新导航回来」才考虑恢复；
+     用户主动刷新（navigation.type === 'reload'）依旧从头开始，保持原设计。 */
+  var navType = '';
+  try {
+    var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    navType = nav ? nav.type : '';
+  } catch (err) {}
+  try {
+    var raw = sessionStorage.getItem(KEY);
+    if (raw && navType !== 'reload') {
+      var rec = JSON.parse(raw);
+      if (rec && rec.id && Date.now() - rec.t < 15000 &&
+          ['page2', 'page3', 'page4', 'dmPage'].indexOf(rec.id) !== -1) {
+        restore = rec.id;
+      }
+    }
+    sessionStorage.removeItem(KEY);
+  } catch (err) {}
+  if (restore) {
+    window.__skipIntro = true;   /* 系统回收后重建：不再让开屏遮罩盖一次 */
+    resetToIntro(true);
+    showPage(restore, { resetScroll: false });
+  } else {
+    resetToIntro(true);
+  }
+  window.addEventListener('pagehide', function () {
+    try {
+      var cur = document.querySelector('.welcome-view.is-visible, .page-view.is-visible');
+      if (cur && cur.id !== 'welcomePage') {
+        sessionStorage.setItem(KEY, JSON.stringify({ id: cur.id, t: Date.now() }));
+      } else {
+        sessionStorage.removeItem(KEY);
+      }
+    } catch (err) {}
+  });
+})();
 playSong(activeSong);
 
 /* ===== MOTION ENHANCEMENTS ===== */
@@ -1114,11 +1168,11 @@ void main(){
   }
   /* ———— 原始主题资源（动态壁纸 lw2 的 mao2 系列部件）———— */
   var DOODLE_SRC = {
-    body: 'page3-doodle-body.png',
-    crown: 'page3-doodle-crown.png',
-    handL: 'page3-doodle-hand-l.png',
-    handR: 'page3-doodle-hand-r.png',
-    tail: 'page3-doodle-tail.png'
+    body: 'page3-doodle-body.webp',
+    crown: 'page3-doodle-crown.webp',
+    handL: 'page3-doodle-hand-l.webp',
+    handR: 'page3-doodle-hand-r.webp',
+    tail: 'page3-doodle-tail.webp'
   };
   var DOODLE_W = 72;            /* 本体显示宽度（CSS px） */
   var doodleImg = {}, doodlePreloaded = false;
@@ -1555,6 +1609,16 @@ function lilyFlashback() {
 (function () {
   const overlay = document.getElementById('introOverlay');
   if (!overlay) return;
+  /* [iosfix2026-10-23d] 页面被 iOS 回收后重建、已恢复到原页：直接拆掉开屏，
+     不要让人再从头看一遍打字机。 */
+  if (window.__skipIntro) {
+    window.__skipIntro = false;
+    document.body.classList.remove('intro-locked');
+    window.__introDone = true;
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    window.dispatchEvent(new Event('site:intro-done'));
+    return;
+  }
   const titleEl = document.getElementById('introTitle');
   const hintEl = document.getElementById('introHint');
   const askEl = document.getElementById('introAsk');
@@ -1801,8 +1865,8 @@ function lilyFlashback() {
     avatar.className = 'dm-avatar';
     avatar.src = side === 'left' ? 'dm-avatar-left.jpg' : 'dm-avatar-right.jpg';
     avatar.alt = side === 'left' ? '天使用户0516' : '访客';
-    avatar.width = 1080;
-    avatar.height = 1080;
+    avatar.width = 256;
+    avatar.height = 256;
     /* 按原稿的分行，一行一个气泡，逐条出现 */
     const stack = document.createElement('div');
     stack.className = 'dm-bubbles';
@@ -2989,9 +3053,17 @@ document.addEventListener('visibilitychange', function () {
     running = true;
     var im = new Image();
     im.decoding = 'async';
-    im.onload = im.onerror = function () {
-      running = false;
-      idle(pump);
+    /* [iosfix2026-10-23d] 原来只等 onload（= 下载完），像素并没有解码。
+       CSS background-image 与 <img> 首次绘制时仍要现场解码，弱机上就是那一下卡。
+       这里主动 decode()：预热阶段就把它解成位图，后续直接上屏。 */
+    var next = function () { running = false; idle(pump); };
+    im.onerror = next;
+    im.onload = function () {
+      if (typeof im.decode === 'function') {
+        im.decode().then(next, next);
+      } else {
+        next();
+      }
     };
     im.src = src;
     /* 兜底：某些 WebView 下 onload 可能不触发 */
@@ -3019,7 +3091,12 @@ document.addEventListener('visibilitychange', function () {
   var P4 = ['page4-flow-0-sm.webp?v=1', 'page4-flow-1-sm.webp?v=4', 'page4-flow-2-sm.webp?v=4',
             'page4-flow-3-sm.webp?v=4', 'page4-flow-4-sm.webp?v=4', 'page4-flow-5-sm.webp?v=4',
             'page4-tile-1-sm.webp', 'page4-tile-2-sm.webp', 'page4-tile-3-sm.webp',
-            'page4-tile-4-sm.webp', 'page4-tile-5-sm.webp', 'page4-tile-6-sm.webp'];
+            'page4-tile-4-sm.webp', 'page4-tile-5-sm.webp', 'page4-tile-6-sm.webp',
+            /* [iosfix2026-10-23d] 这两张透明底装饰图（玫瑰/猫）之前完全没预热，
+               而且因为带 loading="lazy"，要等真正滚到视口才开下载——
+               用户看到的就是“右侧那两张透明底图要等很久”。合计才 14KB。 */
+            'page4-doodle-rose-sm.webp', 'page4-doodle-cat-sm.webp?v=2',
+            'page4-poster-sm.webp?v=20261023'];
   /* 开屏还在放的时候什么都不取，别和首屏抢带宽 */
   window.addEventListener('site:intro-done', function () { warm(P2, 600); });
   /* 用户一直停在开屏、或者没走完问答：6 秒后仍然预热第二页 */
@@ -3027,8 +3104,18 @@ document.addEventListener('visibilitychange', function () {
   /* [iosfix2026-10-23] 私信页的背景与头像只有 10KB，但之前没有任何预热，
      要等翻到私信页才开始下载，弱网下就是“先白一下再出图”。
      放到首屏完全落定之后（3.5s）再静默取，不和开屏抢带宽。 */
-  var DM = ['dm-background-lilies.jpg?v=3', 'dm-avatar-left.jpg'];
-  window.addEventListener('site:intro-done', function () { warm(DM, 3500); });
+  var DM = ['dm-background-lilies.jpg?v=3', 'dm-avatar-left.jpg', 'dm-avatar-right.jpg'];
+  /* [iosfix2026-10-23d] 跟手小图（第三页 WINGS 翻开后跟着指针飘的兔子）之前是
+     等 canvas 初始化时才 preloadDoodle()，也就是“翻到那张卡的那一刻”才开始下载，
+     用户看到的就是“要等一下才冒出来”。五个部件合计才 6KB，直接提前预取。 */
+  var DOODLE = ['page3-doodle-body.webp', 'page3-doodle-crown.webp',
+                'page3-doodle-hand-l.webp', 'page3-doodle-hand-r.webp',
+                'page3-doodle-tail.webp'];
+  /* 私信页三张图合计才 21KB，提前到 1200ms：之前排 3500ms 又在队列尾部，
+     加上 P2 六张串行，真正取到时已经五六秒之后了。 */
+  window.addEventListener('site:intro-done', function () { warm(DM, 1200); });
+  window.addEventListener('site:intro-done', function () { warm(DOODLE, 800); });
+  window.setTimeout(function () { warm(DOODLE, 0); }, 7000);
   window.addEventListener('site:page', function (e) {
     var id = e && e.detail && e.detail.id;
     if (id === 'page2') warm(P3, 900);
