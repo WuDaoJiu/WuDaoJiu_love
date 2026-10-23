@@ -5038,11 +5038,27 @@ label {
     background: linear-gradient(158deg, rgba(246, 251, 255, 0.97), rgba(227, 240, 253, 0.96) 62%, rgba(216, 234, 250, 0.96));
   }
 
-  /* ② 保留玻璃感，只压低半径与饱和度 */
+  /* ② 开屏那两张小卡：实测保留 blur(9px) 仍然会让开屏发滞
+     （照片卡一下、开屏文字迟迟不出现，等主线程松开了才冒出来）。
+     这里一并关掉——iOS 上全站至此零 backdrop-filter。
+     补偿：改成柔白玻璃底，原有的描边、高光层、外发光全部保留，
+     观感仍是同一块磨砂板，只是不再透出背后的虚影。 */
   .ask-card,
   .ask-btn {
-    -webkit-backdrop-filter: blur(9px) saturate(118%) !important;
-    backdrop-filter: blur(9px) saturate(118%) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .ask-card {
+    background: rgba(255, 255, 255, 0.50) !important;
+  }
+  .ask-btn {
+    background-color: rgba(255, 255, 255, 0.56);
+  }
+  .ask-btn-primary {
+    background: linear-gradient(158deg, rgba(238, 246, 255, 0.72) 0%, rgba(216, 234, 254, 0.62) 54%, rgba(198, 221, 252, 0.54) 100%);
+  }
+  .ask-btn-ghost {
+    background: linear-gradient(158deg, rgba(255, 255, 255, 0.66) 0%, rgba(232, 242, 255, 0.56) 100%);
   }
 
   /* 移轴：原本常驻在整屏上，其实只在闪回转场出现。

@@ -23,7 +23,12 @@
   <meta name="apple-mobile-web-app-title" content="娓娓道來">
   <meta name="format-detection" content="telephone=no,email=no,address=no">
   <link rel="preload" as="image" href="intro-figure.jpg?v=20261015T" fetchpriority="high">
-<link rel="stylesheet" href="style.css?v=20261023_IOS8">
+  <!-- [ios-font2026-10-23] 首屏用到的三个字面提前拉：否则要先画一遍系统黑体，
+       等 woff2 到齐再整页重排换字体——就是“先黑体、稍后才变成设定字体”的由来 -->
+  <link rel="preload" as="font" type="font/woff2" href="site-heiti-regular-v3.woff2?v=5" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="site-heiti-bold-v3.woff2?v=5" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="site-love-v9.woff2?v=1" crossorigin>
+<link rel="stylesheet" href="style.css?v=20261023_IOS9">
 
 <script>
 (function(){
