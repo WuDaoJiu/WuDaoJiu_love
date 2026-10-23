@@ -242,7 +242,12 @@ void main() {
             .call(list.querySelectorAll('li'))
             .map(function (li) {
               var img = li.querySelector('img');
-              return { src: img ? img.getAttribute('src') : '', title: li.getAttribute('data-title') || '' };
+              /* [iosfix2026-10-23e] 这些 <img> 的 src 现在是 1x1 占位（避免白下 320KB），
+                 真地址在 data-flow-src。这里优先读它，保证 srcKey 仍能命中内联纹理。 */
+              var real = img
+                ? (img.getAttribute('data-flow-src') || img.getAttribute('src') || '')
+                : '';
+              return { src: real, title: li.getAttribute('data-title') || '' };
             })
             .filter(function (item) {
               return item.src;

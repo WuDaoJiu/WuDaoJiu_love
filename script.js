@@ -256,11 +256,47 @@ document.querySelectorAll('.page3-tabs a').forEach((tab, index) => {
 });
 
 /* 按需加载：切到某页时才唤醒该页的图片与视频，首屏不再被其他页抢带宽 */
+/* [iosfix2026-10-23e] 第四页轮播那 6 张 <img> 只是 WebGL 不可用时的降级九宫格。
+   而 WebGL2 可用时纹理直接来自内联的 __P4_FLOW_DATA（data:URI），这 6 张图
+   一个像素都用不上，却要白白下 320KB —— 在蜂窝网下这是实打实的拖慢。
+   这里探一次 WebGL2：可用就不去拉它们；不可用则照旧当九宫格图用。 */
+var __p4FlowInline = null;
+function p4FlowInlineAvailable() {
+  if (__p4FlowInline !== null) return __p4FlowInline;
+  __p4FlowInline = false;
+  if (!window.__P4_FLOW_DATA) return false;
+  try {
+    var c = document.createElement('canvas');
+    __p4FlowInline = !!(c.getContext && c.getContext('webgl2'));
+  } catch (err) { __p4FlowInline = false; }
+  return __p4FlowInline;
+}
+/* [iosfix2026-10-23e] 只有“WebGL 确实用不了”时才把那 6 张真图拉回来（降级九宫格）。
+   判定依据不是提前探测，而是看轮播到底有没有挂上（host 有 is-live）。
+   给 carousel 足够时间（data:URI 纹理解码），3s 后仍无 is-live 才降级。 */
+function maybeRestoreFlowFallback() {
+  var host = document.getElementById('page4Flow');
+  if (!host) return;
+  if (host.classList.contains('is-live')) return;   /* 轮播正常，图永远用不上 */
+  if (!window.__P4_FLOW_DATA) return;               /* 数据脚本没到，再等等 */
+  host.querySelectorAll('img[data-flow-src]').forEach(function (img) {
+    img.src = img.getAttribute('data-flow-src');
+    img.removeAttribute('data-flow-src');
+    img.loading = 'eager';
+  });
+}
 function wakePage(id) {
   const page = document.getElementById(id);
   if (!page) return;
   if (id === 'page3') { preloadPage3Tiles(); schedulePage3Preload(); }
-  page.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
+  /* [iosfix2026-10-23e] 轮播那 6 张一律跳过：wakePage 可能在 page4-flow-data.js
+     还没执行时就被调用（初始 hash 直达第四页），那时判断 WebGL 必然为 false，
+     会把占位换回真地址、白白拉 320KB。降级九宫格的还原交给
+     maybeRestoreFlowFallback()——它在 carousel 挂载结果明确之后再决定。 */
+  page.querySelectorAll('img[loading="lazy"]').forEach(img => {
+    if (img.hasAttribute('data-flow-src')) return;
+    img.loading = 'eager';
+  });
   /* [ios8] 逐张 decode 已停用：在 iOS 上会与开屏动画抢主线程 */
   const video = page.querySelector('video[data-poster]');
   if (video) {
@@ -3041,22 +3077,35 @@ document.addEventListener('visibilitychange', function () {
 (function () {
   var warmed = Object.create(null);
   var queue = [];
-  var running = false;
+  /* [iosfix2026-10-23e] 这里是本轮“图要等二十几秒”的真凶。
+     原实现是【全局单条队列】+ 每张图之间夹一次 requestIdleCallback(timeout 2500)。
+     也就是说：一张图 = 下载 + 解码 + 一次空闲回调，实测约 1.7s 才轮到下一张。
+     进第二页时才把 P3 的 12 张排进队尾，而队里已有 P2(6)+DM(3)+DOODLE(5)，
+     结果 page3-banner 与四张跳转卡直到 24s 才发请求 —— 这就是“首次进入第三页图很慢”。
+     现在改成：小并发池（4 路同时取），取完立刻补位，不再等空闲回调。
+     图片总量才 800KB，4 路并发下两三秒就能全部落盘。 */
+  var MAX_PARALLEL = 4;
+  var running = 0;
   function idle(fn) {
     if (window.requestIdleCallback) window.requestIdleCallback(fn, { timeout: 2500 });
     else window.setTimeout(fn, 1200);
   }
   function pump() {
-    if (running) return;
-    var src = queue.shift();
-    if (!src) return;
-    running = true;
+    while (running < MAX_PARALLEL) {
+      var src = queue.shift();
+      if (!src) return;
+      startOne(src);
+    }
+  }
+  function startOne(src) {
+    running += 1;
+    var done = false;
     var im = new Image();
     im.decoding = 'async';
     /* [iosfix2026-10-23d] 原来只等 onload（= 下载完），像素并没有解码。
        CSS background-image 与 <img> 首次绘制时仍要现场解码，弱机上就是那一下卡。
        这里主动 decode()：预热阶段就把它解成位图，后续直接上屏。 */
-    var next = function () { running = false; idle(pump); };
+    var next = function () { if (done) return; done = true; running -= 1; pump(); };
     im.onerror = next;
     im.onload = function () {
       if (typeof im.decode === 'function') {
@@ -3067,7 +3116,7 @@ document.addEventListener('visibilitychange', function () {
     };
     im.src = src;
     /* 兜底：某些 WebView 下 onload 可能不触发 */
-    window.setTimeout(function () { if (running) { running = false; idle(pump); } }, 4000);
+    window.setTimeout(function () { if (done) return; done = true; next(); }, 5000);
   }
   function warm(list, delay) {
     var add = function () {
@@ -3088,8 +3137,10 @@ document.addEventListener('visibilitychange', function () {
             'lily-back.svg?v=32', 'page3-tile-eye-back-sm.webp',
             'page3-card-1-sm.webp', 'page3-card-2-sm.webp',
             'page3-card-3-sm.webp', 'page3-card-4-sm.webp'];
-  var P4 = ['page4-flow-0-sm.webp?v=1', 'page4-flow-1-sm.webp?v=4', 'page4-flow-2-sm.webp?v=4',
-            'page4-flow-3-sm.webp?v=4', 'page4-flow-4-sm.webp?v=4', 'page4-flow-5-sm.webp?v=4',
+  var P4 = [
+            /* [iosfix2026-10-23e] 原来这里排了 6 张 flow webp（320KB），
+               但轮播纹理用的是内联 data:URI，WebGL 可用时它们永远不被绘制。
+               仅当 WebGL2 不可用（需要降级九宫格）时才取。 */
             'page4-tile-1-sm.webp', 'page4-tile-2-sm.webp', 'page4-tile-3-sm.webp',
             'page4-tile-4-sm.webp', 'page4-tile-5-sm.webp', 'page4-tile-6-sm.webp',
             /* [iosfix2026-10-23d] 这两张透明底装饰图（玫瑰/猫）之前完全没预热，
@@ -3097,6 +3148,15 @@ document.addEventListener('visibilitychange', function () {
                用户看到的就是“右侧那两张透明底图要等很久”。合计才 14KB。 */
             'page4-doodle-rose-sm.webp', 'page4-doodle-cat-sm.webp?v=2',
             'page4-poster-sm.webp?v=20261023'];
+  /* [iosfix2026-10-23e] 注意：这里不能立即判断 WebGL——此刻 page4-flow-data.js
+     还没执行完，__P4_FLOW_DATA 是 undefined，会误判为“需要下载”。
+     改为在真正取图时（warm 调用点）再判断，那时脚本已就绪。 */
+  var P4_FLOW = ['page4-flow-0-sm.webp?v=1', 'page4-flow-1-sm.webp?v=4',
+                 'page4-flow-2-sm.webp?v=4', 'page4-flow-3-sm.webp?v=4',
+                 'page4-flow-4-sm.webp?v=4', 'page4-flow-5-sm.webp?v=4'];
+  function p4List() {
+    return p4FlowInlineAvailable() ? P4 : P4.concat(P4_FLOW);
+  }
   /* 开屏还在放的时候什么都不取，别和首屏抢带宽 */
   window.addEventListener('site:intro-done', function () { warm(P2, 600); });
   /* 用户一直停在开屏、或者没走完问答：6 秒后仍然预热第二页 */
@@ -3116,9 +3176,51 @@ document.addEventListener('visibilitychange', function () {
   window.addEventListener('site:intro-done', function () { warm(DM, 1200); });
   window.addEventListener('site:intro-done', function () { warm(DOODLE, 800); });
   window.setTimeout(function () { warm(DOODLE, 0); }, 7000);
+  /* [iosfix2026-10-23e] 原来 P3 只在“切到第二页”时才排队、P4 只在“切到第三页”时才排队。
+     用户若从首屏直接点底部导航跳到第三/四页，那批图等于零预热，进去就是空白。
+     而且即使走正常路径，P3 也要排在 P2+DM+DOODLE 共 14 张后面。
+     现在改成：开屏一结束就按优先级依次排进（并发池会同时跑 4 路），
+     真正翻页时早已在缓存里。下面的 site:page 只作为兜底（warmed 会去重）。 */
+  window.addEventListener('site:intro-done', function () { warm(P3, 1200); });
+  /* 第四页装饰小图（6 张缩略图 + 玫瑰/猫 + 海报）合计才 47KB，
+     但原来要等切到第三页才排，且被 flow 的 320KB 挤在后面。单独提前。 */
+  var P4_DECO = ['page4-tile-1-sm.webp', 'page4-tile-2-sm.webp', 'page4-tile-3-sm.webp',
+                 'page4-tile-4-sm.webp', 'page4-tile-5-sm.webp', 'page4-tile-6-sm.webp',
+                 'page4-doodle-rose-sm.webp', 'page4-doodle-cat-sm.webp?v=2',
+                 'page4-poster-sm.webp?v=20261023'];
+  window.addEventListener('site:intro-done', function () { warm(P4_DECO, 2000); });
+  window.setTimeout(function () { warm(P3, 0); }, 1500);
+  window.setTimeout(function () { warm(P4_DECO, 0); }, 2200);
+  /* [iosfix2026-10-23e] 比预热更关键的一层：.page-view 是 display:none，
+     而 loading="lazy" 的图片在【不可见的祖先】里永远不会触发下载。
+     wakePage() 只在“切页那一刻”才把 lazy 改成 eager——也就是说下载从切页才开始，
+     第一眼当然是空的。这就是“首次进入第三页背景图/跳转图很慢”的另一半。
+     这里在开屏一结束就把第三、四页的 lazy 改成 eager（仍是 display:none，
+     不会绘制、不影响首屏），下载提前到后台静默进行；
+     fetchpriority=low 保证不与首屏抢带宽。
+     第四页轮播那 6 张 flow 图不翻（已有 data:URI 纹理，不需要重复下载）。 */
+  function promoteLazy() {
+    ['page3', 'page4'].forEach(function (pid) {
+      var page = document.getElementById(pid);
+      if (!page) return;
+      page.querySelectorAll('img[loading="lazy"]').forEach(function (img) {
+        /* 轮播那 6 张是 data:URI 占位（纹理已内联），不碰 */
+        if (img.hasAttribute('data-flow-src')) return;
+        img.loading = 'eager';
+        if ('fetchPriority' in img) img.fetchPriority = 'low';
+      });
+    });
+  }
+  window.addEventListener('site:intro-done', function () {
+    window.setTimeout(promoteLazy, 300);
+  });
+  /* 用户一直停在开屏、或压根没点进去：1.2s 后也提。首屏三张图 + 字体
+     在 0.3s 内就已落盘，这个点开始后台取低优先级图不会抢首屏带宽。 */
+  window.setTimeout(promoteLazy, 1200);
   window.addEventListener('site:page', function (e) {
     var id = e && e.detail && e.detail.id;
-    if (id === 'page2') warm(P3, 900);
-    else if (id === 'page3') warm(P4, 900);
+    if (id === 'page2') warm(P3, 300);
+    else if (id === 'page3') { warm(p4List(), 300); warm(P4_DECO, 0); }
+    else if (id === 'page4') { window.setTimeout(maybeRestoreFlowFallback, 3000); }
   });
 })();
