@@ -895,7 +895,7 @@
      票根的三张齿边遮罩 + 入场位移 + 这个画布的 ASCII 重绘挤在同一秒里，
      手机上就是肉眼可见的一顿。水母晚 600ms 醒，人眼几乎察觉不到，
      但入场动画能整段跑顺。 */
-  var wasLive = false, liveAt = 0;
+  var wasLive = false, liveAt = 0, warmPainted = false;
   function loop(ts) {
     raf = requestAnimationFrame(loop);
     if (!lastTs) lastTs = ts;
@@ -906,7 +906,7 @@
     if (live && !wasLive) liveAt = ts;
     wasLive = live;
     if (!live) return;
-    if (ts - liveAt < 600) return;
+    if (ts - liveAt < 120) return;   /* [iosfix2] 首帧已由 boot 同步补画，让路期从 600ms 收到 120ms */
     /* [v49d] 滚动期间完全停画：画布不再每帧重绘，合成器只需要把已有纹理
        平移一下，这是治上下拖动闪白的关键一刀。
        顶栏镜像仍然要刷（它要跟着滚动换源区域），但它只是一块 390×53 的小图，
@@ -930,6 +930,14 @@
       return;
     }
     if (!measure()) return;
+    /* [iosfix2] 第一次进页面二时，画布尺寸刚设好、而 loop 还有 600ms 的让路期，
+       这段时间画布上只剩 CSS 兜底的那层浅蓝渐变 —— 看着就是“先是白的一片，
+       水母过一会儿才冒出来”。这里在 measure 之后同步补画一整帧（含水母，
+       seedJellies 撒的点本来就在画面内），切过去的瞬间就已经有画面了。 */
+    if (!warmPainted) {
+      warmPainted = true;
+      try { render(0.016, 0.30); } catch (e) {}
+    }
     if (!raf) raf = requestAnimationFrame(loop);
   }
 

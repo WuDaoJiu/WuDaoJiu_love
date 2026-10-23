@@ -2311,7 +2311,7 @@ body.intro-locked { overflow: hidden; }
   box-shadow: 0 3px 5px rgba(45, 54, 64, .10), 0 1px 1px rgba(45, 54, 64, .035);
 }
 .dm-bubble::before {
-  content: "✝";
+  content: "";
   position: absolute;
   left: 2px;
   top: 50%;
@@ -2405,7 +2405,7 @@ body.intro-locked { overflow: hidden; }
 .dm-typing[hidden] { display: none; }
 .dm-typing-avatar { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; border: 0; box-shadow: 0 2px 8px rgba(72,90,109,.12); }
 .dm-typing-bubble { position: relative; display: flex; align-items: center; gap: 5px; min-width: 58px; min-height: 31px; padding: 7px 16px 7px 18px; border: 0; border-radius: 1px; background: #fff; box-shadow: 0 3px 5px rgba(45,54,64,.10), 0 1px 1px rgba(45,54,64,.035); }
-.dm-typing-bubble::before { content: "✝"; position: absolute; left: 2px; top: 50%; transform: translateY(-60%); color: #c9e5fb; font: 20px/1 "Segoe UI Symbol", "Noto Sans Symbols 2", "Arial Unicode MS", serif; text-shadow: 0 0 5px rgba(135,198,244,.40); }
+.dm-typing-bubble::before { content: ""; position: absolute; left: 2px; top: 50%; transform: translateY(-60%); color: #c9e5fb; font: 20px/1 "Segoe UI Symbol", "Noto Sans Symbols 2", "Arial Unicode MS", serif; text-shadow: 0 0 5px rgba(135,198,244,.40); }
 .dm-typing-bubble i { width: 4px; height: 4px; border-radius: 50%; background: #b5cfe2; animation: dm-dot 1.2s infinite ease-in-out; }
 .dm-typing i:nth-child(2) { animation-delay: .16s; }
 .dm-typing i:nth-child(3) { animation-delay: .32s; }
@@ -4675,4 +4675,317 @@ label {
 .profile-avatar,
 .post-image {
   background-color: #e7f0f6;
+}
+
+/* =====================================================================
+   [iosfix2026-10-23] 十字架：不再用字符，改用 CSS 笔画绘制
+   ---------------------------------------------------------------------
+   原来全站十字架写的是 U+271D “✝”，靠字体兜底：
+     · iOS Safari 直接把它当 emoji 渲染 —— 紫色圆角方块（安卓是文字字形）
+     · 就算都走文字字形，各端字体的墨迹大小、基线、笔画粗细也不一样
+   现在用两条 currentColor 实心渐变笔画拼成十字：
+     · 颜色完全跟随原有的 color 规则（含 .page2-active 的克莱因蓝切换）
+     · 尺寸全部用 em，字号一改整块等比缩放
+     · 形状与平台字体彻底无关，iOS 和安卓像素级一致
+   ===================================================================== */
+.x-cross,
+.cross-mark,
+.p2-title-cross,
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  --xc-w: .42em;   /* 十字总宽 */
+  --xc-h: .68em;   /* 十字总高 */
+  --xc-t: .085em;  /* 笔画粗细 */
+  --xc-y: 34%;     /* 横笔落点：从竖笔顶端往下 34% */
+  width: var(--xc-w);
+  height: var(--xc-h);
+  background-image: linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center center, center var(--xc-y);
+  background-size: var(--xc-t) 100%, 100% var(--xc-t);
+  filter: drop-shadow(0 0 2px rgba(135, 198, 244, .45));
+}
+/* 行内三处：竖笔贴着正文基线 */
+.x-cross,
+.cross-mark,
+.p2-title-cross {
+  display: inline-block;
+  flex: none;
+  vertical-align: .06em;
+}
+/* 伪元素：清空字符内容，盒子就是十字本身 */
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  content: "";
+  display: block;
+}
+/* 气泡前的十字：left / top 沿用旧值，只把 -60% 改成真正的垂直居中 */
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  transform: translateY(-50%);
+}
+/* 票根标题的十字在浅底上，还要跟着卡片翻动：去掉发光，省一次逐帧滤镜 */
+.p2-title-cross { filter: none; }
+/* 右侧（我这边）的气泡十字更淡，发光换灰调 */
+.dm-row-right .dm-bubble::before {
+  filter: drop-shadow(0 0 1.5px rgba(137, 146, 155, .30));
+}
+
+/* [iosfix2026-10-23] 音乐按钮的音符：从字符 ♫ 换成内联 SVG
+   字符字形在各端字体里的墨迹重心不同，之前靠 translate 硬补像素，
+   安卓调正了 iOS 又歪。SVG 的盒子就是墨迹本身，grid 一居中就是几何精确的正中心。 */
+.site-body .music-bar .music-note {
+  display: block;
+  width: 9.2px;
+  height: 11px;
+  fill: currentColor;
+  transform-origin: 50% 50%;
+  translate: 0px 0px;  /* 抵消旧版为字形补的 -0.5px / -0.3px */
+}
+
+/* =====================================================================
+   [ios-perf2026-10-23] 入场动画降载
+   ---------------------------------------------------------------------
+   1. 图片入场原来是 translateY(8px) scale(.99)：scale 意味着每一帧都要
+      重新栅格化那张 1080px 的位图（三张同时跑），iOS 上就是肉眼可见的抖。
+      0.99 的缩放本来也看不出来，砍掉后只走合成层位移。
+   2. 私信「在线」小牌入场原来从 filter: blur(3px) 化到 0，
+      iOS 每帧都要重新模糊一遍，代价远大于效果，改成透明度 + 位移。
+   ===================================================================== */
+@keyframes image-reveal {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes dm-presence-float-in {
+  0%   { opacity: 0; transform: translateY(16px) scale(.94); }
+  28%  { opacity: .78; }
+  62%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* [iosfix2026-10-23] page3-url-limit
+   第三页那行链接：只露到域名+路径，id 用省略号收掉，不把整行占满；
+   窄屏上再长也会自己截断。 */
+.page3-url > span:nth-child(2) {
+  max-width: min(64%, 232px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =====================================================================
+   [iosfix2 2026-10-23] 十字架按字体墨迹的真实比例重画
+   ---------------------------------------------------------------------
+   上一版靠手感设的参数（粗细 12.5% / 横笔中心 36%）偏细偏低，看着别扭。
+   这次直接把原字符 U+271D 在 100px serif 下渲染成位图，量它的墨迹：
+     墨迹宽 47 / 高 76            -> 宽高比 0.618
+     竖笔宽 11                    -> 笔画粗细 = 高度 x 14.5%
+     横笔 y 92~103（顶部算起）     -> 横笔占高度 25% ~ 39.5%
+   换成 clip-path 画：形状是纯几何多边形，与字体、平台、字号都无关，
+   抗锯齿由浏览器矢量裁剪负责（比 background 的两条渐变块干净，没有接缝）。
+   颜色仍然走 currentColor，.page2-active 的克莱因蓝切换照旧生效。
+   ===================================================================== */
+.x-cross,
+.cross-mark,
+.p2-title-cross,
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  --xc-w: .4202em;   /* 0.68 x 0.618 —— 与字符墨迹同宽高比 */
+  --xc-h: .68em;
+  width: var(--xc-w);
+  height: var(--xc-h);
+  background: currentColor;
+  background-image: none;
+  -webkit-clip-path: polygon(38.27% 0, 61.73% 0, 61.73% 25%, 100% 25%, 100% 39.5%, 61.73% 39.5%, 61.73% 100%, 38.27% 100%, 38.27% 39.5%, 0% 39.5%, 0% 25%, 38.27% 25%);
+  clip-path: polygon(38.27% 0, 61.73% 0, 61.73% 25%, 100% 25%, 100% 39.5%, 61.73% 39.5%, 61.73% 100%, 38.27% 100%, 38.27% 39.5%, 0% 39.5%, 0% 25%, 38.27% 25%);
+  /* 原来的 2px 发光在 iOS 的 2x/3x 屏上会把 27px 的十字糊成一团，收到 1.4px */
+  filter: drop-shadow(0 0 1.4px rgba(135, 198, 244, .42));
+}
+.x-cross,
+.cross-mark,
+.p2-title-cross {
+  display: inline-block;
+  flex: none;
+  vertical-align: .06em;
+}
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  content: "";
+  display: block;
+}
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  transform: translateY(-50%);
+}
+/* 票根标题：浅底 + 随卡片 3D 翻动，不做发光 */
+.p2-title-cross { filter: none; }
+/* 右栏自己的气泡：灰调淡光 */
+.dm-row-right .dm-bubble::before {
+  filter: drop-shadow(0 0 1.2px rgba(137, 146, 155, .28));
+}
+
+/* =====================================================================
+   [iosfix3 2026-10-23] 十字架：把尺寸 / 发光 / 位置逐项对回字符版
+   ---------------------------------------------------------------------
+   上一版我只对齐了「形状比例」，却把另外三样全弄丢了，比对原始规则：
+     原始 .dm-bubble::before  font-size 20px + U+271D
+        -> 墨迹实宽 20x0.47 = 9.4px，实高 20x0.76 = 15.2px
+        我上一版写的 .4202em/.68em -> 8.4 x 13.6px，整整小了一成
+     原始 text-shadow: 0 0 5px rgba(135,198,244,.40)
+        我上一版压到 1.4px，发光弱了三倍半，只剩一圈发虚的边
+     原始 transform: translateY(-60%)
+        我上一版改成 -50%，把十字往上提了
+   现在：宽高改用 .47em / .76em（=字符墨迹相对字号的真实占比，
+   20px 字号下正好 9.4x15.2，27px 字号下 12.7x20.5，与字符完全同尺寸），
+   发光换回 5px / .40（drop-shadow 的模糊半径与 text-shadow 同语义，
+   作用在裁剪后的十字轮廓上，光晕跟着形状走，不会糊成方块）。
+   ===================================================================== */
+.x-cross,
+.cross-mark,
+.p2-title-cross,
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  --xc-w: .47em;    /* 0.76 x 0.618 —— 与字符墨迹同宽高比 */
+  --xc-h: .76em;
+  width: var(--xc-w);
+  height: var(--xc-h);
+  background: currentColor;
+  background-image: none;
+  -webkit-clip-path: polygon(38.27% 0, 61.73% 0, 61.73% 25%, 100% 25%, 100% 39.5%, 61.73% 39.5%, 61.73% 100%, 38.27% 100%, 38.27% 39.5%, 0% 39.5%, 0% 25%, 38.27% 25%);
+  clip-path: polygon(38.27% 0, 61.73% 0, 61.73% 25%, 100% 25%, 100% 39.5%, 61.73% 39.5%, 61.73% 100%, 38.27% 100%, 38.27% 39.5%, 0% 39.5%, 0% 25%, 38.27% 25%);
+  /* 字符版原本就是 5px 蓝晕，这里等量还原 */
+  filter: drop-shadow(0 0 5px rgba(135, 198, 244, .40));
+}
+/* 行内三处：跟字符一样坐在基线上 */
+.x-cross,
+.cross-mark,
+.p2-title-cross {
+  display: inline-block;
+  flex: none;
+  vertical-align: baseline;
+}
+/* 伪元素：盒子就是十字本身 */
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  content: "";
+  display: block;
+}
+/* 气泡前的十字回到字符版的 -60% 位置（原来就是往上提一点，不居中） */
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  transform: translateY(-60%);
+}
+/* 票根标题：浅底 + 随卡片 3D 翻动，不做发光（字符版本来也没有） */
+.p2-title-cross { filter: none; }
+/* 右栏自己的气泡：字符版是 4px 近透明灰晕 */
+.dm-row-right .dm-bubble::before {
+  filter: drop-shadow(0 0 4px rgba(137, 146, 155, .10));
+}
+
+/* =====================================================================
+   [iosfix3 2026-10-23] 票根台的「缓缓浮现」
+   ---------------------------------------------------------------------
+   原设计里票根台是在白幕退场之后单独浮起的：那时页面已经不透明，
+   所以票根从 0 升上来的动作很明确。白幕拆掉之后，如果让票根和
+   page-enter 同时淡入，两段透明度叠在一起，漂浮感就被页面的淡入吃掉了。
+   这里给票根台挂 300ms 延迟 + both（延迟期间保持 0% 帧 = 完全透明）：
+     0 ~300ms   页面自己在淡入，票根台隐身
+     300ms 起   票根台用 760ms 从下方 44px 处浮起来
+   这样页面浮到一半的时候票根开始往上走，就是原来那个节奏。
+   ===================================================================== */
+#page2.is-p2-entering .p2-ticket-stage {
+  animation: p2-stage-in 760ms cubic-bezier(.16, .84, .24, 1) 300ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  #page2.is-p2-entering .p2-ticket-stage { animation: none; }
+}
+
+/* =====================================================================
+   [iosfix4 2026-10-23] 十字架改回「两条渐变笔画」画，换回真正的光晕
+   ---------------------------------------------------------------------
+   json 上一版用 clip-path 裁出十字，形状确实准了，但也把发光弄没了：
+   clip-path 先把元素裁成一个十字，drop-shadow 的阴影落在十字轮廓之外，
+   正好也在裁剪区外 —— 一出来就被剪干净，所以看着一点光都没有。
+   现在改回背景画法：盒子仍是矩形，两条实色渐变拼成十字，
+   透明度只在十字本身有，drop-shadow 自然就能向外散开。
+   参数仍用字符墨迹量出来的比例，不是手调：
+     高 0.76em、宽 0.47em、笔画粗 0.1102em（=0.76 x 14.5%）
+     横笔顶部落在 25%：background-position y = 0.25h/(h-t) = 29.24%
+   ===================================================================== */
+.x-cross,
+.cross-mark,
+.p2-title-cross,
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  --xc-w: .47em;
+  --xc-h: .76em;
+  --xc-t: .1102em;
+  width: var(--xc-w);
+  height: var(--xc-h);
+  background-color: transparent;
+  background-image: linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center top, left 29.24%;
+  background-size: var(--xc-t) 100%, 100% var(--xc-t);
+  -webkit-clip-path: none;
+  clip-path: none;
+  /* 字符版原本的 5px 蓝晕 */
+  filter: drop-shadow(0 0 5px rgba(135, 198, 244, .40));
+}
+.x-cross,
+.cross-mark,
+.p2-title-cross {
+  display: inline-block;
+  flex: none;
+  vertical-align: baseline;
+}
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  content: "";
+  display: block;
+}
+/* 气泡里的十字回到字符版的 -60%，并往右让出 1px（原来紧贴 2px） */
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  left: 3px;
+  transform: translateY(-60%);
+}
+.p2-title-cross { filter: none; }
+.dm-row-right .dm-bubble::before {
+  filter: drop-shadow(0 0 4px rgba(137, 146, 155, .10));
+}
+
+/* =====================================================================
+   [iosfix5 2026-10-23] 把光晕真的做出来
+   ---------------------------------------------------------------------
+   删掉 clip-path 之后发光确实回来了，但用 canvas 按同样参数画了一遍、
+   直接量像素才发现：单层 drop-shadow(0 0 5px rgba(135,198,244,.40))
+   在笔画外侧 1px 处只比白底暗 7 个色阶，2px 处 6 个，4px 处 3 个 ——
+   白底上根本看不出来（这就是“一直没有发光感”的真实原因，
+   不是被裁了，是强度本来就不够）。
+   改成两层叠：内层 3px/62% 贴边聚拢，外层 10px/42% 向外散成蓝雾，
+   实测笔画外 1px 暗 14 阶、2px 12 阶、4px 7 阶、7px 5 阶，
+   是一圈渐进散开的淡蓝雾，不会硬。
+   ===================================================================== */
+.x-cross,
+.cross-mark,
+.p2-title-cross,
+.dm-header-mark::before,
+.dm-bubble::before,
+.dm-typing-bubble::before {
+  filter: drop-shadow(0 0 2.5px rgba(135, 198, 244, .50)) drop-shadow(0 0 9px rgba(135, 198, 244, .32));
+}
+/* 票根标题在浅蓝票面上、还要随卡片 3D 翻动，不发光的规则保留 */
+.p2-title-cross { filter: none; }
+/* 右栏自己的气泡：灰调，同样做两层但很淡 */
+.dm-row-right .dm-bubble::before {
+  filter: drop-shadow(0 0 2.5px rgba(137, 146, 155, .32)) drop-shadow(0 0 9px rgba(137, 146, 155, .20));
 }

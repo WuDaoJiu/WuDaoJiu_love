@@ -242,6 +242,7 @@ function wakePage(id) {
   if (!page) return;
   if (id === 'page3') { preloadPage3Tiles(); schedulePage3Preload(); }
   page.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
+  warmDecodeImages(page);  /* [ios-perf2026-10-23] 唤醒后立刻交给后台线程解码 */
   const video = page.querySelector('video[data-poster]');
   if (video) {
     if (!video.poster) video.poster = video.getAttribute('data-poster');
@@ -259,6 +260,63 @@ function wakePage(id) {
   if (window.__introDone) kick();
   else window.addEventListener('site:intro-done', kick, { once: true });
   window.setTimeout(run, 8000);
+})();
+/* ===== [ios-perf2026-10-23] 图片提前解码 =====
+   iOS Safari 的解码发生在「这张图第一次要画出来」的那一帧，而且默认在主线程同步做，
+   于是翻页 / 滚动时那一帧特别长 —— 看起来就是图片卡一下。
+   img.decode() 让 WebKit 把解码放到后台线程，真正要显示时直接贴纹理。
+   只在图已经开始下载（loading 已置 eager 或已 complete）时调用，不会额外拉流量。 */
+function warmDecodeImages(root) {
+  if (!root || !root.querySelectorAll) return;
+  var list = root.querySelectorAll('img[src]');
+  var i = 0;
+  function idle(fn) {
+    if ('requestIdleCallback' in window) window.requestIdleCallback(fn, { timeout: 900 });
+    else window.setTimeout(fn, 120);
+  }
+  function step() {
+    if (i >= list.length) return;
+    var img = list[i++];
+    if (img && typeof img.decode === 'function' && (img.complete || img.loading === 'eager')) {
+      img.decode().catch(function () {});
+    }
+    idle(step);
+  }
+  idle(step);
+}
+/* 开屏结束后趁空闲把第二页的图先下载并预解码：第二页是主入口，
+   里面那几张 150~230KB 的 jpg 如果等到点进去才开始下载 + 解码，iOS 上就是一下明显卡顿。
+   一次只处理一张、空闲时进行，不抢首屏带宽。 */
+(function () {
+  var done = false;
+  var run = function () {
+    if (done) return;
+    var page = document.getElementById('page2');
+    if (!page) return;
+    done = true;
+    /* 一次只放行一张：先置 eager 再 decode，下次空闲再做下一张。
+       否则 14 张图同时开下载、同时解码，反而是新的卡顿源。 */
+    var list = page.querySelectorAll('img[src]');
+    var i = 0;
+    var step = function () {
+      if (i >= list.length) return;
+      var img = list[i++];
+      if (img.loading === 'lazy') img.loading = 'eager';
+      if (typeof img.decode === 'function') img.decode().catch(function () {});
+      if ('requestIdleCallback' in window) window.requestIdleCallback(step, { timeout: 1500 });
+      else window.setTimeout(step, 120);
+    };
+    step();
+  };
+  var kick = function () {
+    window.setTimeout(function () {
+      if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 3000 });
+      else run();
+    }, 1400);
+  };
+  if (window.__introDone) kick();
+  else window.addEventListener('site:intro-done', kick, { once: true });
+  window.setTimeout(run, 9000);  /* 兜底：开屏一直没走完也不会一直不预热 */
 })();
 /* [note16 2026-10-23] 页面一 → 页面二转场：蓝幕扫过 + 页内错峰入场。
    只在「从首屏点进第二页」时播；从第三/四页切回不播，免得每次翻页都要等一道幕。 */
@@ -315,55 +373,30 @@ function startVeilReveal() {
     if (p2VeilEl) p2VeilEl.classList.remove('is-revealing');
   }, 900);
 }
-function showPage(id, { resetScroll = true, skipP2Enter = false } = {}) {
-  /* [note16] 记住切换前在哪一页，用于决定要不要播转场幕 */
-  const prevPageId = (document.querySelector('.welcome-view.is-visible, .page-view.is-visible') || {}).id || '';
-  /* [note19] 首屏 → 第二页：先起幕，等幕铺满再真正换页 */
-  if (!skipP2Enter) {
-    if (id === 'page2' && prevPageId === 'welcomePage') {
-      playPage2Enter();
-      const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-      if (!reduceMotion) {
-        const seq = ++p2EnterSeq;
-        window.clearTimeout(p2SwitchTimer);
-        p2SwitchTimer = window.setTimeout(function () {
-          if (seq !== p2EnterSeq) return; /* 中途又切去了别的页，这次转场作废 */
-          /* [note20] 不再用「最多等10帧」这种硬上限。
-             真机首次进第二页时，主线程被排版/图片解码堵住，幕的动画时钟会被推后几百毫秒，
-             10帧（约166ms）根本不够，上限一到就提前换页 —— 于是上半屏先露出第二页的暗红底，
-             白幕才慢慢追上来。这就是「内容闪一下」的最后残余。
-             改成读幕自己的动画时钟：跑到 28%（218ms，正好 translateY(0) 盖满）才换页；
-             动画时钟被推后多少，切页就跟着推后多少，绝不可能抢在幕前面。 */
-          var guardAt = performance.now();
-          var go = function () {
-            if (seq !== p2EnterSeq) return;
-            var veilAnim = (p2VeilEl && p2VeilEl.getAnimations) ? p2VeilEl.getAnimations()[0] : null;
-            var covered = !p2VeilEl;
-            if (!covered) {
-              if (veilAnim && veilAnim.currentTime != null) covered = veilAnim.currentTime >= P2_VEIL_COVER_MS;
-              else covered = p2VeilEl.getBoundingClientRect().top <= 0.5;
-            }
-            if (!covered && performance.now() - guardAt < 2000) { window.requestAnimationFrame(go); return; }
-            /* 盖满之后再让出一帧，确保「幕已铺满」这一帧先被画出来，再换页 */
-            window.requestAnimationFrame(function () {
-              if (seq !== p2EnterSeq) return;
-              showPage('page2', { resetScroll: resetScroll, skipP2Enter: true });
-              /* 换页这一帧已经交出去，下一帧再揭幕 */
-              window.requestAnimationFrame(startVeilReveal);
-            });
-          };
-          go();
-        }, P2_SWITCH_DELAY);
-        return;
-      }
-    } else {
-      ++p2EnterSeq; /* 打断还没落地的首屏转场 */
-      /* 幕还在跑时又切去别的页，立刻收幕，不让它盖在第三页上 */
-      window.clearTimeout(p2StageTimer);
-      window.clearTimeout(p2EnterTimer);
-      const p2stale = document.getElementById('page2');
-      if (p2stale) p2stale.classList.remove('is-p2-entering');
-      if (p2VeilEl) { p2VeilEl.classList.remove('is-covering'); p2VeilEl.classList.remove('is-revealing'); }
+function showPage(id, { resetScroll = true /* [ioscall] skipP2Enter 已废弃，保留入参兼容旧调用 */ } = {}) {
+  /* _iOS_NO_P2_VEIL [iosfix2026-10-23]
+     首屏 → 第二页不再走「白幕扫过 + 票根台错峰浮起」那套转场。
+     原来会先起一道满屏白幕（白底 + 克莱因蓝竖线纸纹）从下往上盖死整页，
+     盖满之后才换页、再退幕。真机上主线程一被排版/解码堵住，
+     白幕会在屏幕上多停好几百毫秒 —— 就是「点进去先看到一整屏空白竖线纸」。
+     现在和第三页、第四页、私信页保持一致：只靠 is-visible 变化触发
+     page-enter 淡入（460ms），让第二页自己慢慢浮现。
+     旧的 playPage2Enter / startVeilReveal 函数和 .p2-enter-veil 样式都留着，
+     以后想恢复这套转场，把下面一行取消注释再在后面 return 即可。
+     // playPage2Enter(); */
+  /* [iosfix3] 票根台的「缓缓浮现」原来挂在退幕回调里（is-p2-entering），
+     白幕拆掉之后这个类就没人加了，票根于是硬生生砸出来。
+     这里必须抢在 is-visible 之前挂上：元素还处在 display:none 时动画不运行，
+     等它真的显示出来就从关键帧 0%（透明）开始，票根第一帧就是透明的，不会出现
+     「先完整显示 120ms 再突然变透明」的闪。 */
+  const p2StageEl = document.getElementById('page2');
+  if (p2StageEl) {
+    window.clearTimeout(p2StageTimer);
+    p2StageEl.classList.remove('is-p2-entering');
+    if (id === 'page2') {
+      void p2StageEl.offsetWidth;
+      p2StageEl.classList.add('is-p2-entering');
+      p2StageTimer = window.setTimeout(() => p2StageEl.classList.remove('is-p2-entering'), 1150);
     }
   }
   document.querySelectorAll('.welcome-view, .page-view').forEach(page => page.classList.toggle('is-visible', page.id === id));
