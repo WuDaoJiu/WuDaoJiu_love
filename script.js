@@ -118,11 +118,30 @@ pauseButton.addEventListener('click', () => {
 
 // Layout follows the viewport through CSS units.
 
-document.querySelectorAll('.page-link').forEach(link => link.addEventListener('click', event => {
-  event.preventDefault();
-  showPage('page2');
-  if (!audio.src) playSong(activeSong);
-}));
+/* [iosfix2026-10-23 tap] iOS 上第一次点按偶尔只走完 pointer 阶段、click 不派发，
+   表现就是「点两下才跳」。这里在 pointerup 阶段做点按判定：位移小、时间短就算点中，
+   直接跳；click 保留给键盘与桌面，用时间戳去重，避免一次点按触发两次跳转。 */
+document.querySelectorAll('.page-link').forEach(link => {
+  let startX = 0, startY = 0, startT = 0, lastNav = 0;
+  const goPage2 = () => {
+    const now = Date.now();
+    if (now - lastNav < 500) return;
+    lastNav = now;
+    showPage('page2');
+    if (!audio.src) playSong(activeSong);
+  };
+  link.addEventListener('pointerdown', event => {
+    startX = event.clientX; startY = event.clientY; startT = Date.now();
+  }, { passive: true });
+  link.addEventListener('pointerup', event => {
+    if (!startT) return;
+    const moved = Math.abs(event.clientX - startX) + Math.abs(event.clientY - startY);
+    const held = Date.now() - startT;
+    startT = 0;
+    if (moved < 16 && held < 900) { event.preventDefault(); goPage2(); }
+  }, { passive: false });
+  link.addEventListener('click', event => { event.preventDefault(); goPage2(); });
+});
 
 document.querySelectorAll('.bottom-nav a').forEach(link => link.addEventListener('click', event => {
   event.preventDefault();
@@ -1522,7 +1541,7 @@ function lilyFlashback() {
     if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
   }
   zoomables.forEach(img => {
-    img.addEventListener('click', () => openLightbox(img.currentSrc || img.src, img.alt));
+    img.addEventListener('click', () => openLightbox(img.getAttribute('data-zoom-src') || img.currentSrc || img.src, img.alt));
   });
   overlay.addEventListener('click', event => {
     if (event.target !== bigImg) closeLightbox();
@@ -2990,11 +3009,13 @@ document.addEventListener('visibilitychange', function () {
     if (delay) window.setTimeout(add, delay);
     else idle(add);
   }
-  var P2 = ['page2-avatar.jpg', 'page2-ticket1.jpg?v=ident5', 't2-a.jpg?v=ident3',
-            't2-b.jpg?v=ident3', 't2-c.jpg?v=ident3', 'jelly.png?v=j5'];
+  var P2 = ['page2-avatar.jpg', 'page2-ticket1-sm.webp?v=ident5', 't2-a-sm.webp?v=ident3',
+            't2-b-sm.webp?v=ident3', 't2-c-sm.webp?v=ident3', 'jelly-sm.webp?v=j5'];
   var P3 = ['page3-banner-sm.webp', 'page3-tile-rain-sm.webp', 'page3-tile-wings-sm.webp',
             'page3-tile-lily-sm.webp', 'page3-tile-eye-sm.webp', 'page3-tile-rain-back-sm.webp',
-            'lily-back.svg?v=32', 'page3-tile-eye-back-sm.webp'];
+            'lily-back.svg?v=32', 'page3-tile-eye-back-sm.webp',
+            'page3-card-1-sm.webp', 'page3-card-2-sm.webp',
+            'page3-card-3-sm.webp', 'page3-card-4-sm.webp'];
   var P4 = ['page4-flow-0-sm.webp?v=1', 'page4-flow-1-sm.webp?v=4', 'page4-flow-2-sm.webp?v=4',
             'page4-flow-3-sm.webp?v=4', 'page4-flow-4-sm.webp?v=4', 'page4-flow-5-sm.webp?v=4',
             'page4-tile-1-sm.webp', 'page4-tile-2-sm.webp', 'page4-tile-3-sm.webp',
@@ -3003,6 +3024,11 @@ document.addEventListener('visibilitychange', function () {
   window.addEventListener('site:intro-done', function () { warm(P2, 600); });
   /* 用户一直停在开屏、或者没走完问答：6 秒后仍然预热第二页 */
   window.setTimeout(function () { warm(P2, 0); }, 6000);
+  /* [iosfix2026-10-23] 私信页的背景与头像只有 10KB，但之前没有任何预热，
+     要等翻到私信页才开始下载，弱网下就是“先白一下再出图”。
+     放到首屏完全落定之后（3.5s）再静默取，不和开屏抢带宽。 */
+  var DM = ['dm-background-lilies.jpg?v=3', 'dm-avatar-left.jpg'];
+  window.addEventListener('site:intro-done', function () { warm(DM, 3500); });
   window.addEventListener('site:page', function (e) {
     var id = e && e.detail && e.detail.id;
     if (id === 'page2') warm(P3, 900);
