@@ -2297,6 +2297,7 @@ body.intro-locked { overflow: hidden; }
   border-radius: 1px;
   background: #fff;
   color: #565a5e;
+  /* 固定回复继续使用站点字体；随机访客内容在下方单独使用系统中文字体。 */
   font-family: var(--site-font) !important;
   font-size: 13px;
   font-weight: 400 !important;
@@ -2386,8 +2387,21 @@ body.intro-locked { overflow: hidden; }
 .dm-presence:active { transform: scale(.97); }
 .dm-presence.is-used { opacity: 0; transform: translateY(-5px); pointer-events: none; }
 
-.dm-view, .dm-view button, .dm-view input, .dm-view .dm-bubble {
+.dm-view,
+.dm-view button {
   font-family: var(--site-font) !important;
+}
+/* 固定回复仍走站点字体；访客输入在下方切到系统中文字体。 */
+.dm-view input,
+.dm-view .dm-bubble {
+  font-family: var(--site-font) !important;
+  font-synthesis: none;
+}
+/* 访客内容是随机输入，使用系统中文字体确保任意字都落在同一套字形里。 */
+.dm-view .dm-row-right .dm-bubble,
+.dm-view .dm-input-wrap input {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-synthesis: none;
 }
 .dm-typing {
   position: absolute;
@@ -2432,6 +2446,8 @@ body.intro-locked { overflow: hidden; }
   background: rgba(255,255,255,.76);
   color: #5e666c;
   font: 14px/1 var(--site-font);
+  font-family: var(--site-font) !important;
+  font-synthesis: none;
   box-shadow: inset 0 1px 3px rgba(201, 229, 251, .34);
 }
 .dm-input-wrap input::placeholder { color: #b7bec4; }
