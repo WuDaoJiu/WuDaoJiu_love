@@ -6,6 +6,8 @@ const musicControls = document.querySelector('.music-controls');
 const siteBody = document.body;
 const musicBar = document.querySelector('.music-bar');
 const bottomNav = document.querySelector('.bottom-nav');
+/* 页面切换后浏览器可能补发旧 click，不能让它命中页面二的图片。 */
+let suppressP2LightboxUntil = 0;
 let hasUserInteracted = false;
 let userPausedAudio = false;
 let playAttempt = 0;
@@ -278,7 +280,7 @@ function maybeRestoreFlowFallback() {
   var host = document.getElementById('page4Flow');
   if (!host) return;
   if (host.classList.contains('is-live')) return;   /* 轮播正常，图永远用不上 */
-  if (!window.__P4_FLOW_DATA) return;               /* 数据脚本没到，再等等 */
+  if (location.protocol === 'file:' && !window.__P4_FLOW_DATA) return;   /* 数据脚本没到，再等等（克莱尔：线上不靠它，10/24） */
   host.querySelectorAll('img[data-flow-src]').forEach(function (img) {
     img.src = img.getAttribute('data-flow-src');
     img.removeAttribute('data-flow-src');
@@ -298,10 +300,18 @@ function wakePage(id) {
     img.loading = 'eager';
   });
   /* [ios8] 逐张 decode 已停用：在 iOS 上会与开屏动画抢主线程 */
-  const video = page.querySelector('video[data-poster]');
+  const video = page.querySelector('video[data-poster], video.page4-video');
   if (video) {
-    if (!video.poster) video.poster = video.getAttribute('data-poster');
-    if (video.preload !== 'metadata') video.preload = 'metadata';
+    if (!video.poster && video.hasAttribute('data-poster')) video.poster = video.getAttribute('data-poster');
+    if (id === 'page4') {
+      /* 第四页视频只在用户进入该页后预缓冲，避免首屏抢资源；metadata 会把卡顿推迟到点击播放。 */
+      if (video.preload !== 'auto') {
+        video.preload = 'auto';
+        video.load();
+      }
+    } else if (video.preload !== 'metadata') {
+      video.preload = 'metadata';
+    }
   }
 }
 /* 进站空闲时就把 page3 那排缩略图解码好：首次点进第三页不再有解码先后差 */
@@ -432,6 +442,7 @@ function startVeilReveal() {
   }, 900);
 }
 function showPage(id, { resetScroll = true /* [ioscall] skipP2Enter 已废弃，保留入参兼容旧调用 */ } = {}) {
+  if (id === 'page2') suppressP2LightboxUntil = Date.now() + 450;
   /* _iOS_NO_P2_VEIL [iosfix2026-10-23]
      首屏 → 第二页不再走「白幕扫过 + 票根台错峰浮起」那套转场。
      原来会先起一道满屏白幕（白底 + 克莱因蓝竖线纸纹）从下往上盖死整页，
@@ -1600,7 +1611,7 @@ function lilyFlashback() {
 
 /* P2 lightbox — tap a card or the price sheet to view it full size */
 (function () {
-  const zoomables = [...document.querySelectorAll('.page2-gallery-image img, .price-image img')];
+  const zoomables = [...document.querySelectorAll('.page2-gallery-image img, .price-image img, .p2-zoom')];
   if (!zoomables.length) return;
   const overlay = document.createElement('div');
   overlay.className = 'lightbox';
@@ -1631,7 +1642,14 @@ function lilyFlashback() {
     if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
   }
   zoomables.forEach(img => {
-    img.addEventListener('click', () => openLightbox(img.getAttribute('data-zoom-src') || img.currentSrc || img.src, img.alt));
+    img.addEventListener('click', event => {
+      if (Date.now() < suppressP2LightboxUntil) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      openLightbox(img.getAttribute('data-zoom-src') || img.currentSrc || img.src, img.alt);
+    });
   });
   overlay.addEventListener('click', event => {
     if (event.target !== bigImg) closeLightbox();
@@ -1708,7 +1726,7 @@ function lilyFlashback() {
       fontGap = Promise.race([
         Promise.all([
           document.fonts.load('400 34px "SiteLove"', text),
-          document.fonts.load('700 34px "SiteHeiti"', text)
+          document.fonts.load('400 34px "SiteLoveExtra"', text)   /* 克莱尔：黑体兜底已去掉（10/24） */
         ]).catch(function () {}),
         new Promise(function (res) { window.setTimeout(res, 900); })
       ]);
@@ -2141,7 +2159,10 @@ function glitch(ms, srcEl) {
     var bands = [];
     for (var n = 0; n < 11; n++) {
       var el = cloneAt();
-      el.style.willChange = 'transform, clip-path, filter';
+      /* 克莱尔：色边阴影在建好时就固定下来（一半带、一半不带），
+         不再每帧改 filter——iOS 上每改一次都要把整块重画一遍（10/24） */
+      el.style.willChange = 'transform, clip-path';
+      if (n % 2) el.style.filter = 'drop-shadow(-4px 0 rgba(0,235,255,.85)) drop-shadow(4px 0 rgba(255,25,70,.75))';
       bands.push(el);
     }
 
@@ -2191,9 +2212,6 @@ function glitch(ms, srcEl) {
         var dir = Math.random() < 0.5 ? -1 : 1;
         var dx = dir * rnd(3, 24) * amp;
         el.style.transform = 'translate3d(' + dx.toFixed(1) + 'px,0,0)';
-        el.style.filter = Math.random() < 0.5
-          ? 'drop-shadow(' + (-dx * 0.45).toFixed(1) + 'px 0 rgba(0,235,255,.85)) drop-shadow(' + (dx * 0.45).toFixed(1) + 'px 0 rgba(255,25,70,.75))'
-          : 'none';
       }
 
       /* 竖向切带：随机 x、随机宽、纵向错位 */
@@ -2638,18 +2656,8 @@ function glitch(ms, srcEl) {
     } else if (moved) {
       settleBack(front, cards);
     } else if (!gestureMoved) {
-      /* 向上/向下滚页后手指抬起时也落在这里：不算点击，不展横版 */
-      var card = e.target.closest ? e.target.closest('.p2-card') : null;
-      var shot = e.target.closest ? e.target.closest('.p2-zoom') : null;
-      if (shot) {
-        /* 点到图：放大看图，不展开横版票根 */
-        if (typeof window.p2ZoomImage === 'function') {
-          window.p2ZoomImage(shot.getAttribute('data-zoom-src') || shot.currentSrc || shot.src, shot.alt);
-        }
-      }
-      /* [v20]按你说的，取消「点文字弹横版票根」这套设定：
-         现在竖版票根上任何位置都不会再弹出横版长条票，
-         点图片依旧只走大图预览。 */
+      /* 轻触不展开票根；图片放大由上方唯一的 click 监听负责，
+         避免 touchend 与 click 双重打开，也避免切页手势误触发灯箱。 */
     }
     dragDx = 0;
     pendingDx = 0;
@@ -3134,7 +3142,7 @@ document.addEventListener('visibilitychange', function () {
             't2-b-sm.webp?v=ident3', 't2-c-sm.webp?v=ident3', 'jelly-sm.webp?v=j5'];
   var P3 = ['page3-banner-sm.webp', 'page3-tile-rain-sm.webp', 'page3-tile-wings-sm.webp',
             'page3-tile-lily-sm.webp', 'page3-tile-eye-sm.webp', 'page3-tile-rain-back-sm.webp',
-            'lily-back.svg?v=32', 'page3-tile-eye-back-sm.webp',
+            'lily-back.webp?v=1', 'page3-tile-eye-back-sm.webp',   /* 克莱尔：SVG 模糊滤镜换成预渲染小图（10/24） */
             'page3-card-1-sm.webp', 'page3-card-2-sm.webp',
             'page3-card-3-sm.webp', 'page3-card-4-sm.webp'];
   var P4 = [
@@ -3151,10 +3159,13 @@ document.addEventListener('visibilitychange', function () {
   /* [iosfix2026-10-23e] 注意：这里不能立即判断 WebGL——此刻 page4-flow-data.js
      还没执行完，__P4_FLOW_DATA 是 undefined，会误判为“需要下载”。
      改为在真正取图时（warm 调用点）再判断，那时脚本已就绪。 */
-  var P4_FLOW = ['page4-flow-0-sm.webp?v=1', 'page4-flow-1-sm.webp?v=4',
-                 'page4-flow-2-sm.webp?v=4', 'page4-flow-3-sm.webp?v=4',
-                 'page4-flow-4-sm.webp?v=4', 'page4-flow-5-sm.webp?v=4'];
+  /* 克莱尔：线上轮播纹理就是这 6 张 480px 图（合计约 110KB），空闲时一起预热；
+     本地 file:// 仍走内联数据（10/24） */
+  var P4_FLOW = ['page4-flow-0-480.webp?v=1', 'page4-flow-1-480.webp?v=1',
+                 'page4-flow-2-480.webp?v=1', 'page4-flow-3-480.webp?v=1',
+                 'page4-flow-4-480.webp?v=1', 'page4-flow-5-480.webp?v=1'];
   function p4List() {
+    if (location.protocol !== 'file:') return P4.concat(P4_FLOW);
     return p4FlowInlineAvailable() ? P4 : P4.concat(P4_FLOW);
   }
   /* 开屏还在放的时候什么都不取，别和首屏抢带宽 */

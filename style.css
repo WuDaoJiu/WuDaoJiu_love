@@ -1566,27 +1566,22 @@ body.lightbox-open { overflow: hidden; }
 }
 @font-face {
   font-family: "SiteLove";
-  src: url("site-love-v9.woff2?v=1") format("woff2"), url("site-love-v9.woff?v=1") format("woff");
+  /* 克莱尔：从完整字库重新切了一份，覆盖全站用到的 843 个字（含原来缺的那些），
+     不再需要黑体和补字表兜底（10/24） */
+  src: url("site-love-v10.woff2?v=1") format("woff2");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
-  font-family: "SiteHeiti";
-  src: url("site-heiti-regular-v3.woff2?v=5") format("woff2"), url("site-heiti-regular-v3.otf?v=5") format("opentype");
+  font-family: "P4Symbols";
+  src: url("page4-symbols.woff2?v=20261024_1") format("woff2");
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "SiteHeiti";
-  src: url("site-heiti-bold-v3.woff2?v=5") format("woff2"), url("site-heiti-bold-v3.otf?v=5") format("opentype");
-  font-style: normal;
-  font-weight: 700;
   font-display: swap;
 }
 :root {
-  --site-font: "SiteLove", "SiteHeiti", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --site-font: "SiteLove", "SiteLoveExtra", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 body,
 .site-body :where(main, main *, button, .music-bar, .music-bar *, .bottom-nav, .bottom-nav *) {
@@ -1601,7 +1596,8 @@ body,
 }
 /* 颜文字完全继承全站字体，不再单独指定，避免字形/字重不一致 */
 .site-body .page4-symbol {
-  font-family: inherit !important;
+  font-family: "P4Symbols", var(--site-font) !important;
+  line-height: 1.25;
   letter-spacing: .01em;
 }
 
@@ -4278,13 +4274,14 @@ body.is-hidden-tab *, body.is-hidden-tab *::before, body.is-hidden-tab *::after 
    只放在 SiteLove 后面，已有字仍然用原来那份，不会改变已有排版。 */
 @font-face {
   font-family: "SiteLoveExtra";
-  src: url("site-love-extra-v3.woff2?v=3") format("woff2"), url("site-love-extra-v3.woff?v=3") format("woff");
+  /* 克莱尔：原件里也没有的 6 个符号（—‹✓✿〈〉）从原来的黑体里单切出来兜底，1KB 多（10/24） */
+  src: url("site-love-fill.woff2?v=1") format("woff2");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 :root {
-  --site-font: "SiteLove", "SiteLoveExtra", "SiteHeiti", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --site-font: "SiteLove", "SiteLoveExtra", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 /* 水母本来压着 .95 透明度，提亮之后让它透出来 */
 .p2-jelly { opacity: 1; }
@@ -5072,3 +5069,11 @@ label {
     backdrop-filter: blur(5px) !important;
   }
 }
+
+/* 克莱尔：「轻轻呼吸」那颗按钮原来每帧在动 box-shadow，iOS 每一帧都要重画阴影。
+   改成只上下浮动，阴影固定在原来两档的中间值（10/24） */
+@keyframes dm-presence-breath {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.dm-presence { box-shadow: 0 4px 9px rgba(45,54,64,.11), 0 1px 2px rgba(45,54,64,.04); }

@@ -896,16 +896,19 @@
      手机上就是肉眼可见的一顿。水母晚 600ms 醒，人眼几乎察觉不到，
      但入场动画能整段跑顺。 */
   var wasLive = false, liveAt = 0, warmPainted = false;
+  /* 克莱尔：看不见就彻底停掉循环（不在页面二、切到后台、或水母层滚出屏幕），
+     原来是每帧照样排队、进来再 return，iOS 上三四页也一直在跑。看得见了再续上（10/24） */
+  var onScreen = true;
   function loop(ts) {
+    var live = ready && !document.hidden && onScreen && page.classList.contains('is-visible');
+    if (!live) { raf = null; lastTs = 0; wasLive = false; return; }
     raf = requestAnimationFrame(loop);
     if (!lastTs) lastTs = ts;
     var dt = (ts - lastTs) / 1000;
     lastTs = ts;
     if (dt > 0.1) dt = 0.1;
-    var live = ready && !document.hidden && page.classList.contains('is-visible');
-    if (live && !wasLive) liveAt = ts;
-    wasLive = live;
-    if (!live) return;
+    if (!wasLive) liveAt = ts;
+    wasLive = true;
     if (ts - liveAt < 120) return;   /* [iosfix2] 首帧已由 boot 同步补画，让路期从 600ms 收到 120ms */
     /* [v49d] 滚动期间完全停画：画布不再每帧重绘，合成器只需要把已有纹理
        平移一下，这是治上下拖动闪白的关键一刀。
@@ -970,7 +973,15 @@
   }
   window.addEventListener('resize', boot);
   window.addEventListener('orientationchange', function () { setTimeout(boot, 220); });
-  document.addEventListener('visibilitychange', function () { lastTs = 0; });
+  document.addEventListener('visibilitychange', function () { lastTs = 0; if (!document.hidden) boot(); });
+  if (window.IntersectionObserver) {   /* 克莱尔：水母层滚出屏幕就停，滚回来再画（10/24） */
+    try {
+      new IntersectionObserver(function (es) {
+        onScreen = es[es.length - 1].isIntersecting;
+        if (onScreen) boot();
+      }).observe(host);
+    } catch (e) {}
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {
